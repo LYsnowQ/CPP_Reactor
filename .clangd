@@ -1,0 +1,12 @@
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -Wall
+    - -Wextra
+  CompilationDatabase: .
+Diagnostics:
+  UnusedIncludes: Strict
+  MisleadingIndentation: true
+Index:
+  Background: Build
+
