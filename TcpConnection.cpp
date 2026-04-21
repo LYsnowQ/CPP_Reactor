@@ -10,7 +10,7 @@
 
 std::unique_ptr<reactor::net::TcpConnection> reactor::net::TcpConnection::create(int fd,core::EventLoop* loop)
 {
-    auto conn = std::make_unique<reactor::net::TcpConnection>(
+    auto conn = std::make_unique<TcpConnection>(
                 fd,loop,"Connection-"+std::to_string(fd)
                 );
     if(!conn->init_())return nullptr;
@@ -97,9 +97,7 @@ void reactor::net::TcpConnection::handleClose()
     if(state_ == kDisconnected || state_ == kDisconnecting) return;
     state_ = kDisconnecting;
 
-    //loop_->shutdown();
-
-    //TODO: loop_->deleteTask(fd_);
+    loop_->destroyTask(channel_->getSocket());
 }
 
 

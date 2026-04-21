@@ -1,23 +1,124 @@
-#define _GNU_SOURCE
-#include "HttpRequest.h"
-#include "Buffer.h"
+#include "HttpRequest.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <string.h>
-#include <unistd.h>
-#include <assert.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/errno.h>
-#include <sys/sendfile.h>
-#include <fcntl.h>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <sys/types.h>
+
+reactor::net::protocol::HttpRequest::HttpRequest(reactor::base::Buffer* dataPackage)
+:data_(dataPackage),method_(std::string()),url_(std::string()),version_(std::string()),curState_(HttpRequestState::kParseReqLine)
+{
+    parseLine_();
+    parseHead_();
+
+    if(method_ == "POST")
+        parseBody_();
+    curState_ = HttpRequestState::kParseDone;
+}
 
 
+std::string reactor::net::protocol::HttpRequest::getMethed()
+{
+    if (method_.length())
+    {
+        return method_;
+    }
+    return nullptr;
+}
 
+
+std::string reactor::net::protocol::HttpRequest::getUrl()
+{
+    if (url_.length())
+    {
+        return url_;
+    }
+    return nullptr;
+}
+
+
+std::string reactor::net::protocol::HttpRequest::version()
+{
+    if (version_.length())
+    {
+        return version_;
+    }
+    return nullptr;
+}
+
+
+std::vector<std::pair<std::string,std::string>> reactor::net::protocol::HttpRequest::getHeader()
+{
+    return headers_;
+}
+
+
+std::string reactor::net::protocol::HttpRequest::getBody()
+{
+    return "";
+}
+
+
+reactor::net::protocol::HttpRequest::HttpRequestState reactor::net::protocol::HttpRequest::getState()
+{
+    return curState_;
+}
+           
+    
+void reactor::net::protocol::HttpRequest::parseLine_()
+{ 
+    curState_ = HttpRequestState::kParseReqLine;
+    size_t index = data_->find("\r\n");
+    std::string requestLine = data_->retrieveAsString(index);
+    index = requestLine.find(" ");
+    method_ = requestLine.substr();
+    index++;
+    index = requestLine.find(" ",index);
+    url_ = requestLine.substr(requestLine.find(" "));
+    index++;
+    index = requestLine.find(" ",index);
+    version_ = requestLine.substr(requestLine.find(" "));
+}
+
+
+void reactor::net::protocol::HttpRequest::parseHead_()
+{
+    curState_ = HttpRequestState::kParseReqHeaders;
+    uint32_t end = data_->find("/r/n/r/n");
+    size_t index = 0;
+    while(index < end)
+    {
+        index = data_->find("/r/n");
+        std::string sub = data_->retrieveAsString(index);
+        
+        //分割key: value
+        std::string::size_type subpos = sub.find(": "); 
+        if (subpos == std::string::npos)continue;
+
+        std::string key = sub.substr(0,subpos); 
+        std::string value = sub.substr(subpos+2);
+        /*由于头部请求策略问题，其中有些参数多个值并非有单一拆分原则，具体如下：
+         * 1.大部分请求头均是逗号隔离多个值。
+         * 2.Set-Cookie由于内容支持逗号则其策略为多个值存储多次，且内部是使用；来区分的
+         * 3.每个Cookie头只包含一组name = value
+         * 基于以上情况，这里不做拆分，只做整行存储,具体情况交给上层处理
+        while(subpos<sub.size()){
+            subpos = sub.find(",",subpos)                     
+            }
+        */
+        headers_.emplace_back(key,value);
+    }
+    data_->retrieve(4);
+}
+
+
+void reactor::net::protocol::HttpRequest::parseBody_()
+{
+    //TODO:暂不实现
+}
+
+
+#if 0
 #define HeaderSize 12
 
 struct HttpRequest* httpRequestInit()
@@ -447,3 +548,4 @@ void sendDir(const char* dirName,struct Buffer* sendBuffer, int cfd)
 #endif
     free(namelist);
 }
+#endif

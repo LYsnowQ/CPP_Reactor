@@ -15,19 +15,19 @@ writeIndex_(kCheapPrepend)
 {}
 
 
-size_t reactor::base::Buffer::readableBytes()
+size_t reactor::base::Buffer::readableBytes() const
 {
     return writeIndex_ - readIndex_;
 }
 
 
-size_t reactor::base::Buffer::writeableBytes()
+size_t reactor::base::Buffer::writeableBytes() const
 {
     return buffer_.size() - writeIndex_;
 }
 
 
-size_t reactor::base::Buffer::prependableBytes()
+size_t reactor::base::Buffer::prependableBytes() const
 {
     return readIndex_;
 }
@@ -36,6 +36,20 @@ size_t reactor::base::Buffer::prependableBytes()
 const char* reactor::base::Buffer::peek() const
 {
     return begin_() + readIndex_;
+}
+
+
+size_t reactor::base::Buffer::find(const std::string_view substr) 
+{
+    auto buffer = getStringView(readableBytes());
+    return buffer.find(substr);//由于读取默认都是从未消费开始即readIndex_开始，所有这里返回的都是相对值 
+}
+
+
+size_t reactor::base::Buffer::find(const std::string_view substr,size_t offset) 
+{
+    auto buffer = getStringView(offset,readableBytes());
+    return buffer.find(substr);//由于读取默认都是从未消费开始即readIndex_开始，所有这里返回的都是相对值 
 }
 
 
@@ -53,10 +67,46 @@ void reactor::base::Buffer::append(const char* data,size_t len)
 }
         
        
+void reactor::base::Buffer::retrieve(size_t len)
+{
+    if(len < readableBytes())
+    {
+        readIndex_ += len;
+    }
+    else
+    {//覆盖原使用过的数据重复利用
+        retrieveAll();
+    }
+}
+
+
+void reactor::base::Buffer::retrieveAll()
+{
+    readIndex_ = kCheapPrepend;
+    writeIndex_ = kCheapPrepend;
+}
+
+
+auto reactor::base::Buffer::getStringView(size_t len)
+    ->decltype(std::string_view()) const
+{
+    if(len > readableBytes()) return "";
+    return std::string_view(&buffer_[readIndex_],len);    
+}
+
+
+auto reactor::base::Buffer::getStringView(size_t offset,size_t len)
+    ->decltype(std::string_view()) const
+{
+    if(len > readableBytes()) return "";
+    return std::string_view(&buffer_[readIndex_+offset],len);    
+}
+
+
 std::string reactor::base::Buffer::retrieveAsString(size_t len)
 {
     std::string result(peek(),len);
-    retrieve_(len);
+    retrieve(len);
     return result;
 }
 
@@ -102,7 +152,7 @@ ssize_t reactor::base::Buffer::writeFd(int fd)
     const ssize_t n = ::write(fd, peek(), readableBytes());
     if(n > 0)
     {
-        retrieve_(n);
+        retrieve(n);
     }
     return n;
 }
@@ -126,24 +176,6 @@ char* reactor::base::Buffer::beginWrite_()
 }
 
 
-void reactor::base::Buffer::retrieve_(size_t len)
-{
-    if(len < readableBytes())
-    {
-        readIndex_ += len;
-    }
-    else
-    {//覆盖原使用过的数据重复利用
-        retrieveAll_();
-    }
-}
-
-
-void reactor::base::Buffer::retrieveAll_()
-{
-    readIndex_ = kCheapPrepend;
-    writeIndex_ = kCheapPrepend;
-}
 
 
 void reactor::base::Buffer::ensureWriteableBytes_(size_t len)
