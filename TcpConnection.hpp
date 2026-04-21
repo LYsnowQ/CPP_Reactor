@@ -6,11 +6,8 @@
 #include "Channel.hpp"
 #include "EventLoop.hpp"
 #include "Buffer.hpp"
-//#include "HttpRequest.hpp"
-//#include "HttpResponse.hpp"
-
-//是否每次组装完后自动发送（非一次性发送）
-//#define MSG_SEND_AUTO
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 namespace reactor::net{
     class TcpConnection
@@ -52,10 +49,8 @@ namespace reactor::net{
         base::Buffer readBuffer_;
         base::Buffer writeBuffer_;
 
-        //http协议
-        //TODO:等待http适配后使用
-        //std::unique_ptr<HttpRequest> request_;
-        //std::unique_ptr<HttpResponse> response_;
+        std::unique_ptr<protocol::HttpRequest> request_;
+        std::unique_ptr<protocol::HttpResponse> response_;
     };
 }
 

@@ -3,7 +3,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
+#include <type_traits>
 #include <vector>
 
 namespace reactor::base
@@ -18,30 +20,34 @@ namespace reactor::base
         explicit Buffer();
         ~Buffer() = default;
 
-        size_t readableBytes();
-        size_t writeableBytes();        
-        size_t prependableBytes();
+        size_t readableBytes()const;
+        size_t writeableBytes()const;        
+        size_t prependableBytes()const;
 
         const char* peek() const;
         
+        size_t find(const std::string_view substr);
+        size_t find(const std::string_view substr,size_t offset);
+
         void append(const std::string& str);
         void append(const char* data,size_t len);
         
-       
+        void retrieve(size_t len);
+        void retrieveAll();
+        
+        auto getStringView(size_t len) -> decltype(std::string_view()) const; 
+        auto getStringView(size_t offset,size_t len) -> decltype(std::string_view()) const; 
         std::string retrieveAsString(size_t len);
         std::string retrieveAllString(); 
         
         ssize_t readFd(int fd, int* saved_errno);
         ssize_t writeFd(int fd);
 
-
     private:
         char* begin_();
         const char* begin_()const;
         char* beginWrite_();
         
-        void retrieve_(size_t len);
-        void retrieveAll_();
 
         void ensureWriteableBytes_(size_t len);
         void makeSpace_(size_t len);

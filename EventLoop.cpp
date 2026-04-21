@@ -13,7 +13,6 @@
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
-#include <string.h>
 
 
 reactor::core::EventLoop::EventLoop():EventLoop("MainThread")
@@ -153,6 +152,22 @@ int32_t reactor::core::EventLoop::addTask(std::unique_ptr<net::Channel> channel,
 }
 
 
+int32_t reactor::core::EventLoop::destroyTask(int fd)
+{
+    if(channelMap_.find(fd) == channelMap_.end())
+    {
+        throw std::system_error(
+                    errno,
+                    std::system_category(),
+                    "fd dosen't exist"
+                );
+        return -1;
+    }
+    
+    channelMap_.erase(fd);    
+    return 0;
+}
+
 int32_t reactor::core::EventLoop::processTaskQ()
 {
     std::unique_lock<std::mutex> lk(mutex_);
@@ -214,7 +229,6 @@ int32_t reactor::core::EventLoop::remove_(int fd)
     }
     dispatcher_->setChannel(channelMap_[fd].get());
     int32_t ret = dispatcher_->remove();
-    channelMap_.erase(fd);
     return ret;
 }
 

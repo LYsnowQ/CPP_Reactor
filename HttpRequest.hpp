@@ -1,34 +1,58 @@
 #pragma once
 
-#include "Buffer.h"
-#include "HttpResponse.h"
-#include <stdbool.h>
+#include <string>
+#include <map>
+#include <vector>
+#include "Buffer.hpp"
+//#include "HttpResponse.hpp"
+//#include "HttpResponse.hpp"
 
-struct RequestHeader
-{
-    char* key;
-    char* value;
-};
 
-enum HttpRequestState
-{
-    ParseReqLine,
-    ParseReqHeaders,
-    ParseReqBody,
-    ParseReqDone
-};
 
-struct HttpRequest
-{
-    char* method;
-    char* url;
-    char* version;
-    struct RequestHeader* reqHeaders;
-    int reqHeadersNum;
 
-    enum HttpRequestState curState;
-};
+namespace reactor::net::protocol{
 
+
+    class HttpRequest
+    {
+
+    public:
+        enum class HttpRequestState {kParseReqLine,kParseReqHeaders,kParseReqBody,kParseDone};
+        
+        HttpRequest(base::Buffer* dataPackage);
+        ~HttpRequest() = default;
+
+        std::string getMethed();
+        std::string getUrl();
+        std::string version();
+
+        std::vector<std::pair<std::string,std::string>> getHeader();
+        
+        std::string getBody();
+        
+        HttpRequestState getState();
+           
+    private:
+        void parseHead_();
+        void parseLine_();
+        void parseBody_();
+
+    private:
+
+        reactor::base::Buffer* data_;
+        std::string method_;
+        std::string url_;
+        std::string version_;
+        std::vector<std::pair<std::string,std::string>>headers_;
+        std::string body_;
+
+        enum HttpRequestState curState_;
+    };
+
+
+}//namespace reactor::net::protocol
+
+#if 0
 //初始化
 struct HttpRequest* httpRequestInit();
 //重置
@@ -63,3 +87,4 @@ bool processHttpRequest(struct HttpRequest* request,struct HttpResponse* respons
 void sendFile(const char* fileName,struct Buffer* sendBuffer ,int cfd);
 //发送目录
 void sendDir(const char* dirName,struct Buffer* sendBuffer, int cfd);
+#endif

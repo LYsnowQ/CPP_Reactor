@@ -43,7 +43,9 @@ namespace reactor::core
         int32_t run();
 
         int32_t addTask(std::unique_ptr<net::Channel> channel ,ChannelOP type);
-        
+
+        int32_t destroyTask(int fd);        
+
         int32_t active(int fd,int32_t event);
         
         int32_t processTaskQ();
