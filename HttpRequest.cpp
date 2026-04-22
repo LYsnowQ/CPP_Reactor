@@ -1,21 +1,39 @@
 #include "HttpRequest.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <sys/types.h>
 
-reactor::net::protocol::HttpRequest::HttpRequest(reactor::base::Buffer* dataPackage)
-:data_(dataPackage),method_(std::string()),url_(std::string()),version_(std::string()),curState_(HttpRequestState::kParseReqLine)
+reactor::net::protocol::HttpRequest::HttpRequest(base::Buffer* dataPackage)
+:data_(dataPackage),method_(std::string()),url_(std::string()),version_(std::string()),curState_(HttpRequestState::kIdle)
+{}
+
+std::pair<std::unique_ptr<reactor::net::protocol::HttpRequest>,std::string> reactor::net::protocol::HttpRequest::parseRequest(base::Buffer* data)
 {
-    parseLine_();
-    parseHead_();
-
-    if(method_ == "POST")
-        parseBody_();
-    curState_ = HttpRequestState::kParseDone;
+    if(!data || data->readableBytes() == 0)
+    {
+        return{nullptr,"Empty request"};
+    }
+    auto res = std::unique_ptr<HttpRequest>(new HttpRequest(data)); 
+    
+    if(!res->parse_())
+    {
+        switch (res->curState_) {
+        case(HttpRequestState::kParseReqLineFailed):
+            return{nullptr,"Invalied requestLine"};
+        case(HttpRequestState::kParseReqHeadersFailed):
+            return {nullptr,"Invalied headers"};
+        case(HttpRequestState::kParseReqBodyFailed):
+            return {nullptr,"Invalied body"};
+        default:
+            return {nullptr,"Unknow Error"};
+        }
+    }
+    return {std::move(res),"OK"};
 }
-
 
 std::string reactor::net::protocol::HttpRequest::getMethed()
 {
@@ -23,7 +41,7 @@ std::string reactor::net::protocol::HttpRequest::getMethed()
     {
         return method_;
     }
-    return nullptr;
+    return "";
 }
 
 
@@ -33,7 +51,7 @@ std::string reactor::net::protocol::HttpRequest::getUrl()
     {
         return url_;
     }
-    return nullptr;
+    return "";
 }
 
 
@@ -43,7 +61,7 @@ std::string reactor::net::protocol::HttpRequest::version()
     {
         return version_;
     }
-    return nullptr;
+    return "";
 }
 
 
@@ -58,42 +76,95 @@ std::string reactor::net::protocol::HttpRequest::getBody()
     return "";
 }
 
-
-reactor::net::protocol::HttpRequest::HttpRequestState reactor::net::protocol::HttpRequest::getState()
+/*
+uint32_t reactor::net::protocol::HttpRequest::getState()
 {
     return curState_;
 }
-           
+*/         
     
-void reactor::net::protocol::HttpRequest::parseLine_()
-{ 
-    curState_ = HttpRequestState::kParseReqLine;
-    size_t index = data_->find("\r\n");
-    std::string requestLine = data_->retrieveAsString(index);
-    index = requestLine.find(" ");
-    method_ = requestLine.substr();
-    index++;
-    index = requestLine.find(" ",index);
-    url_ = requestLine.substr(requestLine.find(" "));
-    index++;
-    index = requestLine.find(" ",index);
-    version_ = requestLine.substr(requestLine.find(" "));
+bool reactor::net::protocol::HttpRequest::parse_()
+{
+    if(!parseLine_())return false;
+    if(!parseHead_())return false;
+    if(!parseBody_())return false;
+    return true;
 }
 
+bool reactor::net::protocol::HttpRequest::parseLine_()
+{ 
+    curState_ = HttpRequestState::kParseReqLine;
 
-void reactor::net::protocol::HttpRequest::parseHead_()
+    auto lineEnd = data_->find("\r\n");
+    
+    if(lineEnd == std::string::npos) 
+    {
+        curState_ = HttpRequestState::kParseReqLineFailed;
+        return false;
+    }
+
+    std::string requestLine = data_->retrieveAsString(lineEnd);
+    data_->retrieve(2);
+
+    const auto firstSpace = requestLine.find(' ');
+    if(firstSpace == std::string::npos)
+    {
+        curState_ = HttpRequestState::kParseReqLineFailed;
+        return false;
+    }
+
+    const auto secondSpace = requestLine.find(' ', firstSpace + 1);
+    if(secondSpace == std::string::npos)
+    {
+        curState_ = HttpRequestState::kParseReqLineFailed;
+        return false;
+    }
+
+    method_ = requestLine.substr(0, firstSpace);
+    url_ = requestLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+    version_ = requestLine.substr(secondSpace + 1);
+
+    if(method_.empty() || url_.empty() || version_.empty())
+    {
+        curState_ = HttpRequestState::kParseReqLineFailed;
+        return false;
+    }
+    return true;
+}
+
+bool reactor::net::protocol::HttpRequest::parseHead_()
 {
     curState_ = HttpRequestState::kParseReqHeaders;
-    uint32_t end = data_->find("/r/n/r/n");
-    size_t index = 0;
-    while(index < end)
+    if(data_->find("\r\n\r\n") == std::string::npos)
     {
-        index = data_->find("/r/n");
+        curState_ = HttpRequestState::kParseReqHeadersFailed;
+        return false;
+    }
+
+    while(true)
+    {
+        auto index = data_->find("\r\n");
+        if(index == std::string::npos)
+        {
+            curState_ = HttpRequestState::kParseReqHeadersFailed;
+            return false;
+        }
+
+        if(index == 0)
+        {
+            data_->retrieve(2);
+            break;
+        }
+
         std::string sub = data_->retrieveAsString(index);
+        data_->retrieve(2);
         
         //分割key: value
         std::string::size_type subpos = sub.find(": "); 
-        if (subpos == std::string::npos)continue;
+        if (subpos == std::string::npos) 
+        {
+            continue;
+        }
 
         std::string key = sub.substr(0,subpos); 
         std::string value = sub.substr(subpos+2);
@@ -108,14 +179,16 @@ void reactor::net::protocol::HttpRequest::parseHead_()
         */
         headers_.emplace_back(key,value);
     }
-    data_->retrieve(4);
+    return true;
 }
 
 
-void reactor::net::protocol::HttpRequest::parseBody_()
+bool reactor::net::protocol::HttpRequest::parseBody_()
 {
     //TODO:暂不实现
+    return true;
 }
+
 
 
 #if 0

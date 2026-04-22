@@ -14,11 +14,11 @@ namespace reactor::core
     public:
         SelectDispatcher(EventLoop* evLoop);
         
-        int32_t add() override;
-        int32_t remove() override;
-        int32_t modify() override;
+        StatusCode add() override;
+        StatusCode remove() override;
+        StatusCode modify() override;
         
-        int32_t dispatch(int timeout = 2) override;
+        StatusCode dispatch(int timeout = 2) override;
    
     private:
         void setFdSet_();

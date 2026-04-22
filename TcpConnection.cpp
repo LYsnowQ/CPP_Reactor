@@ -1,17 +1,20 @@
 #include "TcpConnection.hpp"
 #include "Channel.hpp"
 #include "EventLoop.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 #include <cerrno>
 #include <functional>
 #include <memory>
 #include <string>
+#include <system_error>
 
 
 std::unique_ptr<reactor::net::TcpConnection> reactor::net::TcpConnection::create(int fd,core::EventLoop* loop)
 {
-    auto conn = std::make_unique<TcpConnection>(
-                fd,loop,"Connection-"+std::to_string(fd)
+    auto conn = std::unique_ptr<reactor::net::TcpConnection>(
+                new TcpConnection(fd,loop,"Connection-"+std::to_string(fd))
                 );
     if(!conn->init_())return nullptr;
     return conn;
@@ -19,22 +22,33 @@ std::unique_ptr<reactor::net::TcpConnection> reactor::net::TcpConnection::create
 
 
 reactor::net::TcpConnection::TcpConnection(int fd,core::EventLoop* loop,std::string name)
-    :fd_(fd),state_(kConnecting),loop_(loop),name_(std::move(name))
+    :fd_(fd),state_(kConnecting),loop_(loop),channel_(nullptr),name_(std::move(name))
 {}
-
 
 reactor::net::TcpConnection::~TcpConnection()
 {
+    destory_();
+}
 
+int reactor::net::TcpConnection::fd() const
+{
+    return fd_;
+}
+
+const std::string& reactor::net::TcpConnection::name() const
+{
+    return name_;
+}
+
+void reactor::net::TcpConnection::destory_()
+{
+    channel_ = nullptr;
+    state_ = kDisconnected;
 }
 
 
 bool reactor::net::TcpConnection::init_()
 {
-    //暂时搁置
-    //request_.reset();
-    //response_.resset();
-    //if(!request_ || !response_)return false;
     auto ch = std::make_unique<net::Channel>(
                 fd_,
                 FDEvent::kReadEvent,
@@ -45,6 +59,7 @@ bool reactor::net::TcpConnection::init_()
 
     channel_ = ch.get();
     loop_->addTask(std::move(ch), core::ChannelOP::ADD);
+    state_ = kConnected;
     return true;
 }
 
@@ -55,15 +70,20 @@ void reactor::net::TcpConnection::handleRead()
     const ssize_t n = readBuffer_.readFd(channel_->getSocket(), &savedErr);
 
     if(n > 0)
-    {   //TODO:http解析暂时搁置
-        //  bool ok = parseHttpRequest
-    
-        //if(!ok)
-        //{
+    {   
+        auto [parsedReq,msg] = protocol::HttpRequest::parseRequest(&readBuffer_);      
+        
+        if(parsedReq == nullptr)
+        {
             static const char err400[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             writeBuffer_.append(err400,sizeof(err400)-1);
-        //}
-        //TODO: loop_->modifyTask(fd_);
+            loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
+            return;
+        }
+        request_ = std::move(parsedReq);
+
+        //临时方案
+        loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
     }
     else if(n == 0)
     {
@@ -79,6 +99,12 @@ void reactor::net::TcpConnection::handleRead()
 
 void reactor::net::TcpConnection::handleWrite()
 {
+    if(writeBuffer_.readableBytes() == 0)
+    {
+        static const char ok[] = "HTTP/1.1 200 OK\r\n\r\n";
+        writeBuffer_.append(ok,sizeof(ok)-1);
+    }
+
     const ssize_t n = writeBuffer_.writeFd(fd_);
     if(n < 0 && errno != EAGAIN)
     {
@@ -94,10 +120,15 @@ void reactor::net::TcpConnection::handleWrite()
 
 void reactor::net::TcpConnection::handleClose()
 {
-    if(state_ == kDisconnected || state_ == kDisconnecting) return;
+    if(state_ == kDisconnected || state_ == kDisconnecting)
+    {
+        return;
+    }
     state_ = kDisconnecting;
-
-    loop_->destroyTask(channel_->getSocket());
+    if(channel_)
+    {
+        loop_->addTask(channel_->getSocket(),core::ChannelOP::DELETE);
+    }
 }
 
 

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <map>
 #include <vector>
 #include "Buffer.hpp"
-//#include "HttpResponse.hpp"
-//#include "HttpResponse.hpp"
 
 
 
@@ -16,11 +16,12 @@ namespace reactor::net::protocol{
     class HttpRequest
     {
 
-    public:
-        enum class HttpRequestState {kParseReqLine,kParseReqHeaders,kParseReqBody,kParseDone};
+    public:        
+        static std::pair<std::unique_ptr<HttpRequest>,std::string> parseRequest(base::Buffer* data);
+
+        HttpRequest(const HttpRequest&) = delete;
+        HttpRequest& operator=(const HttpRequest&) = delete;
         
-        HttpRequest(base::Buffer* dataPackage);
-        ~HttpRequest() = default;
 
         std::string getMethed();
         std::string getUrl();
@@ -30,13 +31,27 @@ namespace reactor::net::protocol{
         
         std::string getBody();
         
-        HttpRequestState getState();
            
     private:
-        void parseHead_();
-        void parseLine_();
-        void parseBody_();
+        enum class HttpRequestState{
+            kIdle,
+            kParseReqLine,
+            kParseReqLineFailed,
+            kParseReqHeaders,
+            kParseReqHeadersFailed,
+            kParseReqBody,
+            kParseReqBodyFailed,
+            kParseDone
+        };
 
+        explicit HttpRequest(base::Buffer* data);
+        
+        bool parse_();
+
+        bool parseHead_();
+        bool parseLine_();
+        bool parseBody_();
+        
     private:
 
         reactor::base::Buffer* data_;
@@ -46,7 +61,7 @@ namespace reactor::net::protocol{
         std::vector<std::pair<std::string,std::string>>headers_;
         std::string body_;
 
-        enum HttpRequestState curState_;
+        HttpRequestState curState_;
     };
 
 

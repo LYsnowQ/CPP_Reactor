@@ -6,14 +6,15 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <cerrno>
 
 #include "TcpConnection.hpp"
 #include "TcpServer.hpp"    
 
 
 
-reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread)
-:lfd_(-1),port_(port),baseLoop_(nullptr)
+reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread, core::DispatcherType dispatcherType)
+:lfd_(-1),port_(port),baseLoop_(nullptr),dispatcherType_(dispatcherType)
 {
     lfd_ = socket(AF_INET, SOCK_STREAM, 0);
     if(lfd_ == -1)
@@ -49,7 +50,12 @@ reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread)
                 "bind failed"
                 );
     }
-    threadPool_ = std::make_unique<reactor::net::IOThreadPool>(maxThread);
+    threadPool_ = std::make_unique<reactor::net::IOThreadPool>(maxThread, dispatcherType_);
+}
+
+reactor::net::TcpServer::~TcpServer()
+{
+    stop();
 }
 
 
@@ -80,8 +86,49 @@ void reactor::net::TcpServer::acceptConnection()
     while(1)
     {
         int cfd = accept(lfd_,nullptr,nullptr);
+        if(cfd < 0)
+        {
+            if(errno == EINTR)
+            {
+                continue;
+            }
+            break;
+        }
+
         reactor::core::EventLoop* evloop = threadPool_->getNextLoop();
-        conns_.emplace(cfd,reactor::net::TcpConnection::create(cfd,evloop));
-       //TODO: baseLoop_->processTaskQ();
+        if(!evloop)
+        {
+            close(cfd);
+            continue;
+        }
+
+        auto conn = reactor::net::TcpConnection::create(cfd,evloop);
+        if(!conn)
+        {
+            close(cfd);
+            continue;
+        }
+        conns_.emplace(cfd,std::move(conn));
     }
+}
+
+void reactor::net::TcpServer::stop()
+{
+    if(lfd_ >= 0)
+    {
+        close(lfd_);
+        lfd_ = -1;
+    }
+
+    if(threadPool_)
+    {
+        threadPool_->stop();
+    }
+
+    if(accepter_.joinable())
+    {
+        accepter_.join();
+    }
+
+    conns_.clear();
 }

@@ -8,11 +8,12 @@
 
 
 
-reactor::net::IOThreadPool::IOThreadPool(uint32_t maxThreads)
+reactor::net::IOThreadPool::IOThreadPool(uint32_t maxThreads, core::DispatcherType dispatcherType)
 :loops_(maxThreads),
 latch_(maxThreads),
 loopIndex_(0),
-maxThreads_(maxThreads)
+maxThreads_(maxThreads),
+dispatcherType_(dispatcherType)
 {}
 
 
@@ -24,6 +25,11 @@ reactor::net::IOThreadPool::~IOThreadPool()
 
 void reactor::net::IOThreadPool::start()
 {
+    if(!threads_.empty())
+    {
+        return;
+    }
+
     isStop_.store(false);
     for(size_t i =0; i<loops_.size();i++)
     {
@@ -35,6 +41,11 @@ void reactor::net::IOThreadPool::start()
 
 void reactor::net::IOThreadPool::stop()
 {
+    if(threads_.empty())
+    {
+        return;
+    }
+
     isStop_.store(true);
     for(auto& loop:loops_)
     {
@@ -50,6 +61,7 @@ void reactor::net::IOThreadPool::stop()
             thread.join();
         }
     }
+    threads_.clear();
 }
 
 
@@ -67,7 +79,7 @@ reactor::core::EventLoop* reactor::net::IOThreadPool::getNextLoop()
 
 void reactor::net::IOThreadPool::worker_(size_t index)
 {
-    loops_[index] = std::make_unique<core::EventLoop>(std::string("worker"+std::to_string(index)));
+    loops_[index] = std::make_unique<core::EventLoop>(std::string("worker"+std::to_string(index)), dispatcherType_);
     latch_.count_down();
     loops_[index]->run();
 }

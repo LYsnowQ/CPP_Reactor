@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <cerrno>
 
 
 reactor::core::EpollDispatcher::EpollDispatcher(EventLoop* evLoop)
@@ -20,7 +21,8 @@ readyEvents_(maxNode_)
     {
         throw std::system_error(
                 errno,
-                std::system_category()
+                std::system_category(),
+                "epoll_create failed"
                 );
     }
     name_ = "Epoll";
@@ -37,61 +39,35 @@ reactor::core::EpollDispatcher::~EpollDispatcher()
 }
 
 
-int32_t reactor::core::EpollDispatcher::add() 
+reactor::core::StatusCode reactor::core::EpollDispatcher::add() 
 {
-    int32_t ret = epollCtl_(EPOLL_CTL_ADD);
-    if(ret == -1)
-    {
-        throw std::system_error(
-                errno,
-                std::system_category()
-                );
-    }
-    return ret;
-
+    return epollCtl_(EPOLL_CTL_ADD) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
 
 
-int32_t reactor::core::EpollDispatcher::remove() 
+reactor::core::StatusCode reactor::core::EpollDispatcher::remove() 
 {
-    int32_t ret = epollCtl_(EPOLL_CTL_DEL);
-    if(ret == -1)
-    {
-        throw std::system_error(
-                errno,
-                std::system_category()
-                );
-    }
-    return ret;
-
+    return epollCtl_(EPOLL_CTL_DEL) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
 
 
-int32_t reactor::core::EpollDispatcher::modify() 
+reactor::core::StatusCode reactor::core::EpollDispatcher::modify() 
 {
-    int ret = epollCtl_(EPOLL_CTL_MOD);
-    if(ret == -1)
-    {
-        throw std::system_error(
-                errno,
-                std::system_category()
-                );
-    }
-    return ret;
-
+    return epollCtl_(EPOLL_CTL_MOD) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
         
 
-int32_t reactor::core::EpollDispatcher::dispatch(int timeout) 
+reactor::core::StatusCode reactor::core::EpollDispatcher::dispatch(int timeout) 
 {
     const int count = epoll_wait(epfd_, readyEvents_.data(), maxNode_, timeout*1000);
 
     if(count <0)
     {
-        throw std::system_error(
-                errno,
-                std::system_category()
-                );
+        if(errno == EINTR)
+        {
+            return StatusCode::kAgain;
+        }
+        return StatusCode::kError;
     }
     for(int i = 0; i < count ;i++)
     {
@@ -113,19 +89,18 @@ int32_t reactor::core::EpollDispatcher::dispatch(int timeout)
             ev |= static_cast<uint32_t>(net::FDEvent::kWriteEvent);
         }
 
+        if(has_error)
+        {
+            ev |= static_cast<uint32_t>(net::FDEvent::kErrorEvent);
+        }
+
         if(ev)
         {
             evLoop_->active(fd, ev);
         }
-
-        //异常处理
-        if(has_error)
-        {
-        
-        }
     }
 
-    return 0;
+    return StatusCode::kOk;
 
 }
     
@@ -153,4 +128,3 @@ int32_t reactor::core::EpollDispatcher::epollCtl_(int op)
     }
     return 0;
 }
-

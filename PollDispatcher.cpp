@@ -4,10 +4,10 @@
 
 #include <cstdint>
 #include <sys/types.h>
-#include <system_error>
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <unistd.h>
+#include <cerrno>
 
 
 reactor::core::PollDispatcher::PollDispatcher(EventLoop* evLoop)
@@ -34,7 +34,7 @@ reactor::core::PollDispatcher::~PollDispatcher()
     
 }
 
-int32_t reactor::core::PollDispatcher::add() 
+reactor::core::StatusCode reactor::core::PollDispatcher::add() 
 {
     int events = 0;
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -61,14 +61,14 @@ int32_t reactor::core::PollDispatcher::add()
     
     if(i >= maxNode_)
     {
-        return -1;
+        return StatusCode::kError;
     }
 
-    return 0;
+    return StatusCode::kOk;
 }
 
 
-int32_t reactor::core::PollDispatcher::remove() 
+reactor::core::StatusCode reactor::core::PollDispatcher::remove() 
 {
     int32_t i = 0;
     for(; i<maxNode_;i++)
@@ -83,15 +83,15 @@ int32_t reactor::core::PollDispatcher::remove()
     }
     if(i >= maxNode_)
     {
-        return -1;
+        return StatusCode::kNotFound;
     }
 
-    return 0;
+    return StatusCode::kOk;
 
 }
 
 
-int32_t reactor::core::PollDispatcher::modify() 
+reactor::core::StatusCode reactor::core::PollDispatcher::modify() 
 {
     int events = 0;
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -116,23 +116,24 @@ int32_t reactor::core::PollDispatcher::modify()
     
     if(i >= maxNode_)
     {
-        return -1;
+        return StatusCode::kNotFound;
     }
 
-    return 0;
+    return StatusCode::kOk;
 
 }
         
 
-int32_t reactor::core::PollDispatcher::dispatch(int timeout) 
+reactor::core::StatusCode reactor::core::PollDispatcher::dispatch(int timeout) 
 {
     int count = poll(fds_, maxNode_, timeout*1000);
     if(count == -1)
     {
-        std::system_error(
-                errno,
-                std::system_category()
-                );
+        if(errno == EINTR)
+        {
+            return StatusCode::kAgain;
+        }
+        return StatusCode::kError;
     } 
     for(int i = 0; i < maxNode_ ;i++)
     {
@@ -150,13 +151,16 @@ int32_t reactor::core::PollDispatcher::dispatch(int timeout)
         {
             ev |= static_cast<uint32_t>(net::FDEvent::kWriteEvent);
         }
+        if(fds_[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
+            ev |= static_cast<uint32_t>(net::FDEvent::kErrorEvent);
+        }
         if(ev)
         {
             evLoop_->active(fds_[i].fd, ev);
         }
     }
 
-    return 0;
+    return StatusCode::kOk;
 }
     
-

@@ -39,17 +39,28 @@ const char* reactor::base::Buffer::peek() const
 }
 
 
-size_t reactor::base::Buffer::find(const std::string_view substr) 
+std::string::size_type reactor::base::Buffer::find(const std::string_view substr) const
 {
     auto buffer = getStringView(readableBytes());
     return buffer.find(substr);//由于读取默认都是从未消费开始即readIndex_开始，所有这里返回的都是相对值 
 }
 
 
-size_t reactor::base::Buffer::find(const std::string_view substr,size_t offset) 
+std::string::size_type reactor::base::Buffer::find(const std::string_view substr,size_t offset) const
 {
-    auto buffer = getStringView(offset,readableBytes());
-    return buffer.find(substr);//由于读取默认都是从未消费开始即readIndex_开始，所有这里返回的都是相对值 
+    const auto readable = readableBytes();
+    if(offset >= readable) 
+    {
+        return std::string::npos;
+    }
+
+    auto buffer = getStringView(offset, readable - offset);
+    const auto pos = buffer.find(substr);
+    if(pos == std::string::npos) 
+    {
+        return std::string::npos;
+    }
+    return offset + pos;//统一返回相对于当前可读区起点的偏移
 }
 
 
@@ -98,13 +109,18 @@ auto reactor::base::Buffer::getStringView(size_t len)
 auto reactor::base::Buffer::getStringView(size_t offset,size_t len)
     ->decltype(std::string_view()) const
 {
-    if(len > readableBytes()) return "";
+    const auto readable = readableBytes();
+    if(offset > readable || len > readable - offset) return "";
     return std::string_view(&buffer_[readIndex_+offset],len);    
 }
 
 
 std::string reactor::base::Buffer::retrieveAsString(size_t len)
 {
+    if(len > readableBytes()) 
+    {
+        len = readableBytes();
+    }
     std::string result(peek(),len);
     retrieve(len);
     return result;
@@ -204,4 +220,3 @@ void reactor::base::Buffer::makeSpace_(size_t len)
         writeIndex_ = readIndex_ + readable;
     }
 }
-

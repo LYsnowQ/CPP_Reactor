@@ -6,21 +6,7 @@
 #include <string>
 #include <sys/types.h>
 
-//用来组织回复给客户端的数据块
-typedef void (*responseBody)(const char* fileName,struct Buffer*sendBuffer,int socket);
-
 namespace reactor::net::protocol{
-    enum HttpStatusCode
-    {
-        Unknown = 0,
-        OK = 200,
-        MovePermanently = 301,
-        MovedTemporarily = 302,
-        BadRequest = 400,
-        NotFound = 404,
-        ServerError = 501
-    };
-
 
     enum class ReadyCode:uint16_t
     {
@@ -36,7 +22,7 @@ namespace reactor::net::protocol{
     public:
         HttpResponse(base::Buffer* buffer);
 
-        void setStateLine(const std::string& version,HttpStatusCode status,const std::string& statusMsg);
+        void setStateLine(const std::string& version,uint32_t status,const std::string& statusMsg);
         
         void addHeader(std::string key,std::string value);
 

@@ -16,11 +16,11 @@ namespace reactor::core
         EpollDispatcher(EventLoop* evLoop);
          ~EpollDispatcher();
         
-        int32_t add() override;
-        int32_t remove() override;
-        int32_t modify() override;
+        StatusCode add() override;
+        StatusCode remove() override;
+        StatusCode modify() override;
         
-        int32_t dispatch(int timeout = 2) override;
+        StatusCode dispatch(int timeout = 2) override;
     
     private:
         int32_t epollCtl_(int32_t op);
