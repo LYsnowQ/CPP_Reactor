@@ -26,8 +26,8 @@ namespace reactor::base
 
         const char* peek() const;
         
-        size_t find(const std::string_view substr);
-        size_t find(const std::string_view substr,size_t offset);
+        std::string::size_type find(const std::string_view substr) const;
+        std::string::size_type find(const std::string_view substr,size_t offset) const;
 
         void append(const std::string& str);
         void append(const char* data,size_t len);

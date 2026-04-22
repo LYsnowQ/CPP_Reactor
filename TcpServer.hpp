@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <map>
+#include <thread>
 
 #include "TcpConnection.hpp"
 #include "EventLoop.hpp"
@@ -20,7 +21,7 @@ namespace reactor::net{
     class TcpServer
     {
     public:
-        TcpServer(uint16_t port,uint32_t maxThread);
+        TcpServer(uint16_t port,uint32_t maxThread, core::DispatcherType dispatcherType = core::DispatcherType::kEpoll);
         ~TcpServer();
 
         void run(TcpServerMode mode = TcpServerMode::kMianThreadMode);
@@ -35,5 +36,6 @@ namespace reactor::net{
         std::map<int,std::unique_ptr<TcpConnection>>conns_;
         std::unique_ptr<core::EventLoop> baseLoop_;
         std::unique_ptr<IOThreadPool> threadPool_;
+        core::DispatcherType dispatcherType_;
     };
 }

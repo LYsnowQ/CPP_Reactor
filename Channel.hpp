@@ -11,7 +11,8 @@ namespace reactor::net
     {
         kTimeout = 0x01,
         kReadEvent = 0x02,
-        kWriteEvent = 0x04
+        kWriteEvent = 0x04,
+        kErrorEvent = 0x08
     };
 
     class Channel

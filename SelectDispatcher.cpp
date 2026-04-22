@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/unistd.h>
 #include <system_error>
+#include <cerrno>
 
 
 
@@ -48,34 +49,34 @@ void reactor::core::SelectDispatcher::clearFdSet_()
 }
 
 
-int32_t reactor::core::SelectDispatcher::add()
+reactor::core::StatusCode reactor::core::SelectDispatcher::add()
 {
     if(channel_->getSocket() >= maxSize_)
     {
-        return -1;
+        return StatusCode::kError;
     }
     setFdSet_();
 
-    return 0;
+    return StatusCode::kOk;
 }
 
 
-int32_t reactor::core::SelectDispatcher::remove()
+reactor::core::StatusCode reactor::core::SelectDispatcher::remove()
 {
     clearFdSet_();
-    return 0;
+    return StatusCode::kOk;
 }
 
 
-int32_t reactor::core::SelectDispatcher::modify()
+reactor::core::StatusCode reactor::core::SelectDispatcher::modify()
 {
     clearFdSet_();
     setFdSet_();
-    return 0;
+    return StatusCode::kOk;
 }
 
 
-int32_t reactor::core::SelectDispatcher::dispatch(int timeout)
+reactor::core::StatusCode reactor::core::SelectDispatcher::dispatch(int timeout)
 {
     struct timeval val;
     val.tv_sec = timeout;
@@ -85,11 +86,11 @@ int32_t reactor::core::SelectDispatcher::dispatch(int timeout)
     int32_t count = select(maxSize_, &rdtmp, &wrtmp,nullptr,&val);
     if(count == -1)
     {
-        throw std::system_error(
-                errno,
-                std::system_category()
-                );
-        exit(0);
+        if(errno == EINTR)
+        {
+            return StatusCode::kAgain;
+        }
+        return StatusCode::kError;
     } 
     for(int i = 0; i < maxSize_ ;i++)
     {
@@ -109,5 +110,5 @@ int32_t reactor::core::SelectDispatcher::dispatch(int timeout)
         }
     }
 
-    return 0;
+    return StatusCode::kOk;
 }

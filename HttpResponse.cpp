@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <stdexcept>
 
 reactor::net::protocol::HttpResponse::HttpResponse(base::Buffer* buffer)
 :ready_(15),response_(buffer)
@@ -12,7 +13,7 @@ reactor::net::protocol::HttpResponse::HttpResponse(base::Buffer* buffer)
     checkReady_();
 }
 
-void reactor::net::protocol::HttpResponse::setStateLine(const std::string& version,HttpStatusCode status,const std::string& statusMsg)
+void reactor::net::protocol::HttpResponse::setStateLine(const std::string& version,uint32_t status,const std::string& statusMsg)
 {
     if(version == "")
     {
@@ -29,11 +30,7 @@ void reactor::net::protocol::HttpResponse::addHeader(std::string key,std::string
 {
     if(key == "" || value == "")
     { 
-        throw std::system_error(
-                    errno,
-                    std::system_category(),
-                    "didn't set key or value"
-                );
+        throw std::invalid_argument("header key or value is empty");
     
     }
     headers_.emplace_back(std::move(key)+": " + std::move(value) + "\r\n");
@@ -87,7 +84,7 @@ void reactor::net::protocol::HttpResponse::checkReady_()
     }
     else
     {
-        ready_ |= ~static_cast<uint16_t>(ReadyCode::NoResponseBuffer);
+        ready_ &= ~static_cast<uint16_t>(ReadyCode::NoResponseBuffer);
     }
     
     if(line_ == std::string())
@@ -96,7 +93,7 @@ void reactor::net::protocol::HttpResponse::checkReady_()
     }
     else
     {
-        ready_ |= ~static_cast<uint16_t>(ReadyCode::NoResponseLine);
+        ready_ &= ~static_cast<uint16_t>(ReadyCode::NoResponseLine);
     }
     
     if(headers_.empty())
@@ -105,16 +102,16 @@ void reactor::net::protocol::HttpResponse::checkReady_()
     }
     else
     {
-        ready_ |= ~static_cast<uint16_t>(ReadyCode::NoHeaders);
+        ready_ &= ~static_cast<uint16_t>(ReadyCode::NoHeaders);
     }
     
     if(files_.empty())
     {
-        ready_ |= static_cast<uint16_t>(ReadyCode::NoResponseBuffer);
+        ready_ |= static_cast<uint16_t>(ReadyCode::NoFile);
     }
     else
     {
-        ready_ |= ~static_cast<uint16_t>(ReadyCode::NoResponseBuffer);
+        ready_ &= ~static_cast<uint16_t>(ReadyCode::NoFile);
     }
 }
 

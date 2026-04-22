@@ -25,7 +25,7 @@ namespace reactor::net{
     public:
         using Task = std::function<void()>;
 
-        IOThreadPool(uint32_t maxThreads = 2);
+        IOThreadPool(uint32_t maxThreads = 2, core::DispatcherType dispatcherType = core::DispatcherType::kEpoll);
         ~IOThreadPool();
 
         void start();
@@ -53,6 +53,7 @@ namespace reactor::net{
         std::latch latch_;
         uint32_t loopIndex_;
         const uint32_t maxThreads_;
+        const core::DispatcherType dispatcherType_;
     };
     
 }//namespace reactor::net

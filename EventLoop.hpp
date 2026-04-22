@@ -15,7 +15,7 @@
 namespace reactor::core
 {
 
-    enum class ChannelOP:char16_t
+    enum class ChannelOP:uint8_t
     {
         ADD,
         DELETE,
@@ -32,34 +32,37 @@ namespace reactor::core
         {
             ChannelOP type;
             std::unique_ptr<net::Channel> channel;
+            int fd;
         };
         
         EventLoop();
 
-        EventLoop(std::string name);
+        EventLoop(std::string name, DispatcherType type = DispatcherType::kEpoll);
         
         ~EventLoop(); 
         
-        int32_t run();
+        StatusCode run();
 
-        int32_t addTask(std::unique_ptr<net::Channel> channel ,ChannelOP type);
-
-        int32_t destroyTask(int fd);        
-
-        int32_t active(int fd,int32_t event);
+        StatusCode addTask(std::unique_ptr<net::Channel> channel ,ChannelOP type);
         
-        int32_t processTaskQ();
+        StatusCode addTask(int fd,ChannelOP type);
+
+        StatusCode destroyTask(int fd);        
+
+        StatusCode active(int fd,uint32_t event);
+        
+        StatusCode processTaskQ();
 
         void shutdown();
     private:   
         void taskWakeup_();
         void readLocalMessage_();
 
-        int32_t add_(std::unique_ptr<net::Channel> channel);
-        int32_t remove_(int fd);
-        int32_t modify_(int fd);
+        StatusCode add_(std::unique_ptr<net::Channel> channel);
+        StatusCode remove_(int fd);
+        StatusCode modify_(int fd);
     private:
-        Dispatcher* dispatcher_;
+        std::unique_ptr<Dispatcher> dispatcher_;
 
         // 任务队列
         std::queue<ChannelElement> taskQ_;
