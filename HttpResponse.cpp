@@ -33,7 +33,7 @@ void reactor::net::protocol::HttpResponse::addHeader(std::string key,std::string
         throw std::invalid_argument("header key or value is empty");
     
     }
-    headers_.emplace_back(std::move(key)+": " + std::move(value) + "\r\n");
+    headers_.emplace_back(std::move(key), std::move(value));
 }
 
 

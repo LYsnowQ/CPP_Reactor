@@ -5,7 +5,9 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <optional>
 #include "Buffer.hpp"
+#include "CoreStatus.hpp"
 
 
 
@@ -17,7 +19,17 @@ namespace reactor::net::protocol{
     {
 
     public:        
-        static std::pair<std::unique_ptr<HttpRequest>,std::string> parseRequest(base::Buffer* data);
+        static constexpr size_t kMaxBodyBytes = 1024 * 1024; // 1MB
+
+        struct ParseResult
+        {
+            core::StatusCode code;
+            std::unique_ptr<HttpRequest> request;
+            std::string message;
+            bool tooLarge = false;
+        };
+
+        static ParseResult parseRequest(base::Buffer* data, std::unique_ptr<HttpRequest>* inFlight = nullptr);
 
         HttpRequest(const HttpRequest&) = delete;
         HttpRequest& operator=(const HttpRequest&) = delete;
@@ -46,11 +58,12 @@ namespace reactor::net::protocol{
 
         explicit HttpRequest(base::Buffer* data);
         
-        bool parse_();
+        core::StatusCode parse_();
 
-        bool parseHead_();
-        bool parseLine_();
-        bool parseBody_();
+        core::StatusCode parseHead_();
+        core::StatusCode parseLine_();
+        core::StatusCode parseBody_();
+        std::optional<std::string> findHeader_(std::string_view key) const;
         
     private:
 
@@ -60,6 +73,7 @@ namespace reactor::net::protocol{
         std::string version_;
         std::vector<std::pair<std::string,std::string>>headers_;
         std::string body_;
+        bool bodyTooLarge_ = false;
 
         HttpRequestState curState_;
     };

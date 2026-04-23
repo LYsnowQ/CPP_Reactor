@@ -98,16 +98,14 @@ void reactor::base::Buffer::retrieveAll()
 }
 
 
-auto reactor::base::Buffer::getStringView(size_t len)
-    ->decltype(std::string_view()) const
+std::string_view reactor::base::Buffer::getStringView(size_t len) const
 {
     if(len > readableBytes()) return "";
     return std::string_view(&buffer_[readIndex_],len);    
 }
 
 
-auto reactor::base::Buffer::getStringView(size_t offset,size_t len)
-    ->decltype(std::string_view()) const
+std::string_view reactor::base::Buffer::getStringView(size_t offset,size_t len) const
 {
     const auto readable = readableBytes();
     if(offset > readable || len > readable - offset) return "";

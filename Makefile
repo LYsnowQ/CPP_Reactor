@@ -1,19 +1,22 @@
 SRC := $(shell find . -name "*.cpp" -not -path "./build/*")
-OBJ := $(SRC:.c=.o)
+OBJ := $(SRC:.cpp=.o)
 TARGET := main_run
 
-CC := g++
-CFLAGS := -I. -I./include -Wall -g
+CXX := g++
+CPPFLAGS := -I. -I./include
+CXXFLAGS := -std=c++20 -Wall -g
+LDFLAGS :=
+LDLIBS := -pthread
 
 .PHONY: all clean
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(TARGET) $(OBJ)

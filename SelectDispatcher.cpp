@@ -1,5 +1,6 @@
 #include "SelectDispatcher.hpp"
 #include "Channel.hpp"
+#include "EventLoop.hpp"
 
 #include <cstdint>
 #include <sys/select.h>

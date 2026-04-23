@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <string>
+#include <atomic>
+#include <chrono>
+#include <string_view>
 
 #include "Channel.hpp"
 #include "EventLoop.hpp"
@@ -27,6 +30,7 @@ namespace reactor::net{
 
         int fd()const;
         const std::string& name() const;
+        bool isDisconnected() const;
 
     private:
         enum State {kConnecting, kConnected, kDisconnecting,kDisconnected};
@@ -35,10 +39,14 @@ namespace reactor::net{
         
         bool init_();
         void destory_();
+        void onChannelDestroyed_();
+        bool isParseWaitTimeout_() const;
+        void appendSimpleResponse_(int statusCode, std::string_view reasonPhrase);
+        void queueSimpleResponse_(int statusCode, std::string_view reasonPhrase);
 
     private:
         int fd_;
-        State state_;
+        std::atomic<State> state_;
 
         //非拥有
         core::EventLoop* loop_;
@@ -49,8 +57,12 @@ namespace reactor::net{
         base::Buffer readBuffer_;
         base::Buffer writeBuffer_;
 
+        std::unique_ptr<protocol::HttpRequest> inFlightRequest_;
         std::unique_ptr<protocol::HttpRequest> request_;
         std::unique_ptr<protocol::HttpResponse> response_;
+        std::chrono::steady_clock::time_point parseWaitStart_;
+        std::chrono::steady_clock::time_point requestStartTime_;
+        bool parseWaiting_ = false;
+        bool requestTimingActive_ = false;
     };
 }
-
