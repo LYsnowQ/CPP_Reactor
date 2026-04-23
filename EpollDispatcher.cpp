@@ -1,5 +1,6 @@
 #include "EpollDispatcher.hpp"
 #include "Channel.hpp"
+#include "EventLoop.hpp"
 
 #include <cstdint>
 #include <sys/types.h>

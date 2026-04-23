@@ -7,14 +7,21 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cerrno>
+#include <fcntl.h>
+#include <chrono>
 
 #include "TcpConnection.hpp"
 #include "TcpServer.hpp"    
+#include "spdlog/spdlog.h"
 
 
 
 reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread, core::DispatcherType dispatcherType)
-:lfd_(-1),port_(port),baseLoop_(nullptr),dispatcherType_(dispatcherType)
+:lfd_(-1),
+ port_(port),
+ baseLoop_(nullptr),
+ dispatcherType_(dispatcherType),
+ lastMetricsLogTime_(std::chrono::steady_clock::now())
 {
     lfd_ = socket(AF_INET, SOCK_STREAM, 0);
     if(lfd_ == -1)
@@ -50,7 +57,14 @@ reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread, core::Dispa
                 "bind failed"
                 );
     }
+
+    const int flags = fcntl(lfd_, F_GETFL, 0);
+    if(flags != -1)
+    {
+        fcntl(lfd_, F_SETFL, flags | O_NONBLOCK);
+    }
     threadPool_ = std::make_unique<reactor::net::IOThreadPool>(maxThread, dispatcherType_);
+    lastMetricsSnapshot_ = reactor::observability::Metrics::instance().snapshot();
 }
 
 reactor::net::TcpServer::~TcpServer()
@@ -59,32 +73,36 @@ reactor::net::TcpServer::~TcpServer()
 }
 
 
-void reactor::net::TcpServer::run(TcpServerMode mode)
+reactor::core::StatusCode reactor::net::TcpServer::run()
 {
+    if(isRunning_.exchange(true))
+    {
+        return core::StatusCode::kAgain;
+    }
     threadPool_->start();
     int ret = listen(lfd_,128);
     if(ret == -1)
     {
-        throw std::system_error(
-                errno,
-                std::system_category(),
-                "listen failed"
-                );
+        isRunning_.store(false);
+        return core::StatusCode::kError;
     }
-    if(mode == TcpServerMode::kChiledThreadMode)
-    {//TODO：后续修改
-        accepter_ = std::thread(std::bind(&TcpServer::acceptConnection,this));
-    }
-    else if(mode == TcpServerMode::kMianThreadMode)
-    {//TODO：后续修改
-        acceptConnection();
-    }
+    // if(mode == TcpServerMode::kChiledThreadMode)
+    // {
+        // accepter_ = std::thread(std::bind(&TcpServer::acceptConnection,this));
+    // }
+    // else if(mode == TcpServerMode::kMianThreadMode)
+    // {
+    return acceptConnection();
+    // }
+    // return core::StatusCode::kOk;
 }
 
-void reactor::net::TcpServer::acceptConnection()
+reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
 {
-    while(1)
+    while(isRunning_.load())
     {
+        cleanupClosedConnections_();
+        logMetricsIfNeeded_();
         int cfd = accept(lfd_,nullptr,nullptr);
         if(cfd < 0)
         {
@@ -92,13 +110,25 @@ void reactor::net::TcpServer::acceptConnection()
             {
                 continue;
             }
-            break;
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            if(!isRunning_.load())
+            {
+                break;
+            }
+            reactor::observability::Metrics::instance().onAcceptFail();
+            return core::StatusCode::kError;
         }
+        reactor::observability::Metrics::instance().onAcceptOk();
 
         reactor::core::EventLoop* evloop = threadPool_->getNextLoop();
         if(!evloop)
         {
             close(cfd);
+            reactor::observability::Metrics::instance().onAcceptFail();
             continue;
         }
 
@@ -106,14 +136,27 @@ void reactor::net::TcpServer::acceptConnection()
         if(!conn)
         {
             close(cfd);
+            reactor::observability::Metrics::instance().onAcceptFail();
             continue;
         }
-        conns_.emplace(cfd,std::move(conn));
+        {
+            std::lock_guard<std::mutex> lk(connsMutex_);
+            conns_.emplace(cfd,std::move(conn));
+        }
+        reactor::observability::Metrics::instance().onConnectionOpened();
     }
+    cleanupClosedConnections_();
+    logMetricsIfNeeded_();
+    return core::StatusCode::kOk;
 }
 
-void reactor::net::TcpServer::stop()
+reactor::core::StatusCode reactor::net::TcpServer::stop()
 {
+    if(!isRunning_.exchange(false))
+    {
+        return core::StatusCode::kAgain;
+    }
+
     if(lfd_ >= 0)
     {
         close(lfd_);
@@ -130,5 +173,83 @@ void reactor::net::TcpServer::stop()
         accepter_.join();
     }
 
-    conns_.clear();
+    {
+        std::lock_guard<std::mutex> lk(connsMutex_);
+        const auto remaining = conns_.size();
+        conns_.clear();
+        reactor::observability::Metrics::instance().onConnectionsClosed(static_cast<uint64_t>(remaining));
+    }
+    logMetricsIfNeeded_();
+    return core::StatusCode::kOk;
+}
+
+void reactor::net::TcpServer::cleanupClosedConnections_()
+{
+    std::lock_guard<std::mutex> lk(connsMutex_);
+    uint64_t removed = 0;
+    for(auto it = conns_.begin(); it != conns_.end();)
+    {
+        if(it->second && it->second->isDisconnected())
+        {
+            it = conns_.erase(it);
+            ++removed;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    reactor::observability::Metrics::instance().onConnectionsClosed(removed);
+}
+
+void reactor::net::TcpServer::logMetricsIfNeeded_()
+{
+    constexpr auto kLogInterval = std::chrono::seconds(5);
+    const auto now = std::chrono::steady_clock::now();
+    const auto elapsed = now - lastMetricsLogTime_;
+    if(elapsed < kLogInterval)
+    {
+        return;
+    }
+
+    const auto cur = reactor::observability::Metrics::instance().snapshot();
+    const auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+    const double elapsedSec = static_cast<double>(elapsedUs) / 1000000.0;
+
+    const auto reqDelta = cur.requestsTotal - lastMetricsSnapshot_.requestsTotal;
+    const auto accOkDelta = cur.acceptOk - lastMetricsSnapshot_.acceptOk;
+    const auto accFailDelta = cur.acceptFail - lastMetricsSnapshot_.acceptFail;
+    const auto readDelta = cur.bytesRead - lastMetricsSnapshot_.bytesRead;
+    const auto writeDelta = cur.bytesWritten - lastMetricsSnapshot_.bytesWritten;
+    const auto resp2xxDelta = cur.responses2xx - lastMetricsSnapshot_.responses2xx;
+    const auto resp4xxDelta = cur.responses4xx - lastMetricsSnapshot_.responses4xx;
+    const auto resp5xxDelta = cur.responses5xx - lastMetricsSnapshot_.responses5xx;
+    const auto latencySamplesDelta = cur.requestLatencySamples - lastMetricsSnapshot_.requestLatencySamples;
+    const auto latencyTotalDelta = cur.requestLatencyTotalUs - lastMetricsSnapshot_.requestLatencyTotalUs;
+
+    const double qps = (elapsedSec > 0.0) ? (static_cast<double>(reqDelta) / elapsedSec) : 0.0;
+    const double readBps = (elapsedSec > 0.0) ? (static_cast<double>(readDelta) / elapsedSec) : 0.0;
+    const double writeBps = (elapsedSec > 0.0) ? (static_cast<double>(writeDelta) / elapsedSec) : 0.0;
+    const double avgLatencyUs = (latencySamplesDelta > 0)
+                                    ? (static_cast<double>(latencyTotalDelta) / static_cast<double>(latencySamplesDelta))
+                                    : 0.0;
+
+    spdlog::info(
+        "[metrics] window={:.2f}s qps={:.2f} active_conn={} accept_ok={} accept_fail={} resp_2xx={} resp_4xx={} "
+        "resp_5xx={} read_Bps={:.2f} write_Bps={:.2f} avg_latency_us={:.2f} max_latency_us={}",
+        elapsedSec,
+        qps,
+        cur.activeConnections,
+        accOkDelta,
+        accFailDelta,
+        resp2xxDelta,
+        resp4xxDelta,
+        resp5xxDelta,
+        readBps,
+        writeBps,
+        avgLatencyUs,
+        cur.requestLatencyMaxUs);
+
+    lastMetricsSnapshot_ = cur;
+    lastMetricsLogTime_ = now;
 }

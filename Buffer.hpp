@@ -35,8 +35,8 @@ namespace reactor::base
         void retrieve(size_t len);
         void retrieveAll();
         
-        auto getStringView(size_t len) -> decltype(std::string_view()) const; 
-        auto getStringView(size_t offset,size_t len) -> decltype(std::string_view()) const; 
+        std::string_view getStringView(size_t len) const; 
+        std::string_view getStringView(size_t offset,size_t len) const; 
         std::string retrieveAsString(size_t len);
         std::string retrieveAllString(); 
         
