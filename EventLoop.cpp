@@ -146,6 +146,14 @@ reactor::core::StatusCode reactor::core::EventLoop::active(int fd,uint32_t event
     if(event & static_cast<uint32_t>(net::FDEvent::kReadEvent) && channel->haveReadCallback())
     {
         channel->readFunc();
+        // 读回调可能在同线程中投递并立即处理 DELETE。
+        // 重新检查 channel 是否存在，避免解引用悬空指针。
+        it = channelMap_.find(fd);
+        if(it == channelMap_.end() || !it->second)
+        {
+            return StatusCode::kOk;
+        }
+        channel = it->second.get();
     }
 
     if(event & static_cast<uint32_t>(net::FDEvent::kWriteEvent) && channel->haveWriteCallback())
@@ -168,12 +176,13 @@ reactor::core::StatusCode reactor::core::EventLoop::addTask(std::unique_ptr<net:
     //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
     //   2) 新增 fd 的操作由主线程发起。
 
-    if(threadID_ == std::this_thread::get_id())
+    const bool sameThread = (threadID_ == std::this_thread::get_id());
+    if(sameThread && type != ChannelOP::DELETE)
     {
         // 当前线程直接处理
         processTaskQ();
     }
-    else 
+    else if(!sameThread)
     {
         // 跨线程需要唤醒
         taskWakeup_(); 
@@ -202,12 +211,13 @@ reactor::core::StatusCode reactor::core::EventLoop::addTask(int fd,ChannelOP typ
     //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
     //   2) 新增 fd 的操作由主线程发起。
 
-    if(threadID_ == std::this_thread::get_id())
+    const bool sameThread = (threadID_ == std::this_thread::get_id());
+    if(sameThread && type != ChannelOP::DELETE)
     {
         // 当前线程直接处理
         processTaskQ();
     }
-    else 
+    else if(!sameThread)
     {
         // 跨线程需要唤醒
         taskWakeup_(); 

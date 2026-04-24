@@ -6,6 +6,7 @@
 #include "Metrics.hpp"
 
 #include <cerrno>
+#include <cctype>
 #include <functional>
 #include <memory>
 #include <string>
@@ -13,13 +14,55 @@
 
 #include "spdlog/spdlog.h"
 
+namespace
+{
+    int64_t nowSteadyMs_()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    }
+
+    std::string toLowerCopy_(std::string_view in)
+    {
+        std::string out;
+        out.reserve(in.size());
+        for(char c : in)
+        {
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        }
+        return out;
+    }
+
+    bool shouldKeepAlive_(reactor::net::protocol::HttpRequest& req)
+    {
+        const auto versionLower = toLowerCopy_(req.version());
+        const auto headers = req.getHeader();
+
+        std::string connectionLower;
+        for(const auto& kv : headers)
+        {
+            if(toLowerCopy_(kv.first) == "connection")
+            {
+                connectionLower = toLowerCopy_(kv.second);
+                break;
+            }
+        }
+
+        if(versionLower == "http/1.0")
+        {
+            return connectionLower.find("keep-alive") != std::string::npos;
+        }
+        return connectionLower.find("close") == std::string::npos;
+    }
+}
+
 
 std::unique_ptr<reactor::net::TcpConnection> reactor::net::TcpConnection::create(int fd,core::EventLoop* loop)
 {
     auto conn = std::unique_ptr<reactor::net::TcpConnection>(
                 new TcpConnection(fd,loop,"Connection-"+std::to_string(fd))
                 );
-    if(!conn->init_())return nullptr;
     return conn;
 }
 
@@ -33,7 +76,9 @@ reactor::net::TcpConnection::TcpConnection(int fd,core::EventLoop* loop,std::str
     parseWaitStart_(std::chrono::steady_clock::now()),
     requestStartTime_(std::chrono::steady_clock::now()),
     parseWaiting_(false)
-{}
+{
+    lastActivityMs_.store(nowSteadyMs_(), std::memory_order_relaxed);
+}
 
 reactor::net::TcpConnection::~TcpConnection()
 {
@@ -57,7 +102,7 @@ void reactor::net::TcpConnection::destory_()
 }
 
 
-bool reactor::net::TcpConnection::init_()
+bool reactor::net::TcpConnection::init()
 {
     auto ch = std::make_unique<net::Channel>(
                 fd_,
@@ -73,6 +118,40 @@ bool reactor::net::TcpConnection::init_()
     return true;
 }
 
+void reactor::net::TcpConnection::setKeepAliveEnabled(bool enabled)
+{
+    keepAliveEnabled_ = enabled;
+}
+
+void reactor::net::TcpConnection::setKeepAlivePolicy(uint32_t maxRequests, uint32_t idleTimeoutMs)
+{
+    maxKeepAliveRequests_ = (maxRequests == 0) ? 1U : maxRequests;
+    keepAliveIdleTimeoutMs_ = (idleTimeoutMs == 0) ? 1U : idleTimeoutMs;
+}
+
+void reactor::net::TcpConnection::setCloseCallback(std::function<void(int)> closeCb)
+{
+    closeCallback_ = std::move(closeCb);
+}
+
+bool reactor::net::TcpConnection::shouldCloseForIdle(int64_t nowMs) const
+{
+    if(!keepAliveEnabled_)
+    {
+        return false;
+    }
+    if(state_.load() != kConnected)
+    {
+        return false;
+    }
+    if(keepAliveIdleTimeoutMs_ == 0)
+    {
+        return false;
+    }
+    const auto lastMs = lastActivityMs_.load(std::memory_order_relaxed);
+    return (nowMs - lastMs) >= static_cast<int64_t>(keepAliveIdleTimeoutMs_);
+}
+
 bool reactor::net::TcpConnection::isDisconnected() const
 {
     return state_.load() == kDisconnected;
@@ -82,6 +161,10 @@ void reactor::net::TcpConnection::onChannelDestroyed_()
 {
     channel_ = nullptr;
     state_.store(kDisconnected);
+    if(closeCallback_)
+    {
+        closeCallback_(fd_);
+    }
 }
 
 
@@ -92,6 +175,7 @@ void reactor::net::TcpConnection::handleRead()
 
     if(n > 0)
     {
+        lastActivityMs_.store(nowSteadyMs_(), std::memory_order_relaxed);
         reactor::observability::Metrics::instance().onBytesRead(static_cast<uint64_t>(n));
         if(!requestTimingActive_)
         {
@@ -120,6 +204,7 @@ void reactor::net::TcpConnection::handleRead()
         if(parseResult.code != core::StatusCode::kOk || !parseResult.request)
         {
             inFlightRequest_.reset();
+            keepAliveRequest_ = false;
             if(parseResult.tooLarge)
             {
                 queueSimpleResponse_(413, "Payload Too Large");
@@ -133,8 +218,12 @@ void reactor::net::TcpConnection::handleRead()
         request_ = std::move(parseResult.request);
         inFlightRequest_.reset();
         reactor::observability::Metrics::instance().onRequestParsed();
+        keepAliveRequest_ = keepAliveEnabled_ && shouldKeepAlive_(*request_);
 
-        //临时方案
+        if(channel_)
+        {
+            channel_->writeEventEnable(true);
+        }
         loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
     }
     else if(n == 0)
@@ -166,13 +255,22 @@ void reactor::net::TcpConnection::appendSimpleResponse_(int statusCode, std::str
         requestTimingActive_ = false;
     }
 
-    std::string line = "HTTP/1.1 " + std::to_string(statusCode) + " " + std::string(reasonPhrase) + "\r\n\r\n";
+    std::string line =
+        "HTTP/1.1 " + std::to_string(statusCode) + " " + std::string(reasonPhrase) + "\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: " + std::string(keepAliveRequest_ ? "keep-alive" : "close") + "\r\n"
+        "Server: CPPReactor\r\n"
+        "\r\n";
     writeBuffer_.append(line);
 }
 
 void reactor::net::TcpConnection::queueSimpleResponse_(int statusCode, std::string_view reasonPhrase)
 {
     appendSimpleResponse_(statusCode, reasonPhrase);
+    if(channel_)
+    {
+        channel_->writeEventEnable(true);
+    }
     loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
 }
 
@@ -187,6 +285,7 @@ void reactor::net::TcpConnection::handleWrite()
     const ssize_t n = writeBuffer_.writeFd(fd_);
     if(n > 0)
     {
+        lastActivityMs_.store(nowSteadyMs_(), std::memory_order_relaxed);
         reactor::observability::Metrics::instance().onBytesWritten(static_cast<uint64_t>(n));
     }
     if(n < 0 && errno != EAGAIN)
@@ -196,6 +295,23 @@ void reactor::net::TcpConnection::handleWrite()
     }
     if(writeBuffer_.readableBytes() == 0)
     {
+        if(keepAliveRequest_)
+        {
+            keepAliveRequest_ = false;
+            const auto served = servedRequests_.fetch_add(1, std::memory_order_relaxed) + 1;
+            request_.reset();
+            if(served >= static_cast<uint64_t>(maxKeepAliveRequests_))
+            {
+                handleClose();
+                return;
+            }
+            if(channel_)
+            {
+                channel_->writeEventEnable(false);
+                loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
+            }
+            return;
+        }
         handleClose();
     }
 }

@@ -16,11 +16,20 @@
 
 
 
-reactor::net::TcpServer::TcpServer(uint16_t port,uint32_t maxThread, core::DispatcherType dispatcherType)
+reactor::net::TcpServer::TcpServer(
+    uint16_t port,
+    uint32_t maxThread,
+    core::DispatcherType dispatcherType,
+    bool keepAliveEnabled,
+    uint32_t keepAliveMaxRequests,
+    uint32_t keepAliveIdleTimeoutMs)
 :lfd_(-1),
  port_(port),
  baseLoop_(nullptr),
  dispatcherType_(dispatcherType),
+ keepAliveEnabled_(keepAliveEnabled),
+ keepAliveMaxRequests_((keepAliveMaxRequests == 0) ? 1U : keepAliveMaxRequests),
+ keepAliveIdleTimeoutMs_((keepAliveIdleTimeoutMs == 0) ? 1U : keepAliveIdleTimeoutMs),
  lastMetricsLogTime_(std::chrono::steady_clock::now())
 {
     lfd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -139,9 +148,34 @@ reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
             reactor::observability::Metrics::instance().onAcceptFail();
             continue;
         }
+
+        reactor::net::TcpConnection* connRaw = nullptr;
         {
             std::lock_guard<std::mutex> lk(connsMutex_);
-            conns_.emplace(cfd,std::move(conn));
+            auto [it, inserted] = conns_.emplace(cfd,std::move(conn));
+            if(!inserted || !it->second)
+            {
+                close(cfd);
+                reactor::observability::Metrics::instance().onAcceptFail();
+                continue;
+            }
+            connRaw = it->second.get();
+        }
+        connRaw->setCloseCallback(
+            [this](int fd)
+            {
+                enqueueClosedConnection_(fd);
+            }
+        );
+        connRaw->setKeepAliveEnabled(keepAliveEnabled_);
+        connRaw->setKeepAlivePolicy(keepAliveMaxRequests_, keepAliveIdleTimeoutMs_);
+        if(!connRaw->init())
+        {
+            std::lock_guard<std::mutex> lk(connsMutex_);
+            conns_.erase(cfd);
+            close(cfd);
+            reactor::observability::Metrics::instance().onAcceptFail();
+            continue;
         }
         reactor::observability::Metrics::instance().onConnectionOpened();
     }
@@ -185,21 +219,53 @@ reactor::core::StatusCode reactor::net::TcpServer::stop()
 
 void reactor::net::TcpServer::cleanupClosedConnections_()
 {
+    if(keepAliveEnabled_)
+    {
+        const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch())
+                               .count();
+        std::lock_guard<std::mutex> lk(connsMutex_);
+        for(auto& [fd, conn] : conns_)
+        {
+            if(conn && conn->shouldCloseForIdle(nowMs))
+            {
+                conn->handleClose();
+            }
+        }
+    }
+
+    std::vector<int> localClosedFds;
+    {
+        std::lock_guard<std::mutex> lk(pendingCloseMutex_);
+        if(pendingCloseFds_.empty())
+        {
+            return;
+        }
+        std::swap(localClosedFds, pendingCloseFds_);
+    }
+
     std::lock_guard<std::mutex> lk(connsMutex_);
     uint64_t removed = 0;
-    for(auto it = conns_.begin(); it != conns_.end();)
+    for(int fd : localClosedFds)
     {
-        if(it->second && it->second->isDisconnected())
+        auto it = conns_.find(fd);
+        if(it != conns_.end())
         {
-            it = conns_.erase(it);
+            conns_.erase(it);
             ++removed;
-        }
-        else
-        {
-            ++it;
         }
     }
     reactor::observability::Metrics::instance().onConnectionsClosed(removed);
+}
+
+void reactor::net::TcpServer::enqueueClosedConnection_(int fd)
+{
+    if(fd < 0)
+    {
+        return;
+    }
+    std::lock_guard<std::mutex> lk(pendingCloseMutex_);
+    pendingCloseFds_.push_back(fd);
 }
 
 void reactor::net::TcpServer::logMetricsIfNeeded_()

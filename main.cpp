@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <string>
 
 #include <unistd.h>
 
@@ -12,7 +13,9 @@ int main(int argc, const char** argv)
 {
     if(argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " <port> <resource_path> [dispatcher: epoll|poll|select] [threads]\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " <port> <resource_path> [dispatcher: epoll|poll|select] [threads] [conn_mode: close|keepalive] "
+                     "[keepalive_max_requests] [keepalive_idle_ms]\n";
         return -1;
     }
 
@@ -27,16 +30,29 @@ int main(int argc, const char** argv)
                                     ? reactor::core::dispatcherTypeFromString(argv[3], reactor::core::DispatcherType::kEpoll)
                                     : reactor::core::DispatcherType::kEpoll;
     const auto maxThreads = (argc >= 5) ? static_cast<uint32_t>(std::atoi(argv[4])) : 4U;
+    const std::string connMode = (argc >= 6) ? argv[5] : "close";
+    const bool keepAliveEnabled = (connMode == "keepalive");
+    const auto keepAliveMaxRequests = (argc >= 7) ? static_cast<uint32_t>(std::atoi(argv[6])) : 100U;
+    const auto keepAliveIdleMs = (argc >= 8) ? static_cast<uint32_t>(std::atoi(argv[7])) : 10000U;
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::debug(
-        "资源定向成功，开始启动服务器，dispatcher={}, threads={}",
+        "资源定向成功，开始启动服务器，dispatcher={}, threads={}, conn_mode={}, keepalive_max_requests={}, keepalive_idle_ms={}",
         reactor::core::dispatcherTypeToString(dispatcherType),
-        maxThreads);
+        maxThreads,
+        keepAliveEnabled ? "keepalive" : "close",
+        keepAliveMaxRequests,
+        keepAliveIdleMs);
 
     try
     {
-        reactor::net::TcpServer server(port, maxThreads, dispatcherType);
+        reactor::net::TcpServer server(
+            port,
+            maxThreads,
+            dispatcherType,
+            keepAliveEnabled,
+            keepAliveMaxRequests,
+            keepAliveIdleMs);
         const auto status = server.run();
         return (status == reactor::core::StatusCode::kOk) ? 0 : -1;
     }

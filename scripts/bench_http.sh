@@ -18,7 +18,7 @@ if command -v ab >/dev/null 2>&1; then
     echo "[bench] using ab (ApacheBench)"
     SEC="${DURATION%s}"
     : "${SEC:=15}"
-    # ab is request-count based, keep a simple conversion: req ~= connections * seconds * 20
+    # ab 基于请求总数，做一个简化换算：req ~= connections * seconds * 20
     REQ=$((CONNECTIONS * SEC * 20))
     if [ "${REQ}" -lt 1000 ]; then
         REQ=1000
@@ -35,4 +35,3 @@ while [ "${SECONDS}" -lt "${END_TIME}" ]; do
     COUNT=$((COUNT + 1))
 done
 echo "[bench] curl_loop_requests=${COUNT} in 10s"
-

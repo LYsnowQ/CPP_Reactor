@@ -95,5 +95,4 @@ namespace reactor::observability
         s.requestLatencyMaxUs = requestLatencyMaxUs_.load(std::memory_order_relaxed);
         return s;
     }
-} // namespace reactor::observability
-
+} // 命名空间 reactor::observability
