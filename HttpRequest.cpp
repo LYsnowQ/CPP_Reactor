@@ -202,7 +202,7 @@ reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseHead_()
         std::string sub(subView.data(), subView.size());
         data_->retrieve(index + 2);
         
-        //分割key: value
+        // 分割请求头键值
         std::string::size_type subpos = sub.find(": "); 
         if (subpos == std::string::npos) 
         {
@@ -473,7 +473,7 @@ bool parseHttpRequestHead(struct HttpRequest* request,struct Buffer* readBuffer)
         //请求投被解析完，跳过空行
         readBuffer->readPos += 2;
         //修改解析状态
-        //忽略 POST 请求
+        // 忽略 POST 请求
         request->curState = ParseReqDone;
     }
     return true;
@@ -493,7 +493,7 @@ bool parseHttpRequest(struct HttpRequest* request, struct Buffer* readBuffer, st
             flag = parseHttpRequestHead(request, readBuffer);    
             break;
         case ParseReqBody:
-            // 当前版本不处理 body，直接结束请求解析
+            // 当前版本不处理请求体，直接结束请求解析
             request->curState = ParseReqDone;
             break;
         default:
@@ -582,7 +582,7 @@ const char* getFileType(const char* name)
 
 
 
-//基于 GET 处理 HTTP
+// 基于 GET 处理 HTTP
 bool processHttpRequest(struct HttpRequest* request,struct HttpResponse* response)
 {
     if(strcasecmp(request->method,"get") != 0)

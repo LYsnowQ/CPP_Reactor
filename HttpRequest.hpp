@@ -19,7 +19,7 @@ namespace reactor::net::protocol{
     {
 
     public:        
-        static constexpr size_t kMaxBodyBytes = 1024 * 1024; // 1MB
+        static constexpr size_t kMaxBodyBytes = 1024 * 1024; // 1MB 上限
 
         struct ParseResult
         {

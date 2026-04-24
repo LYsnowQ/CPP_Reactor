@@ -55,5 +55,4 @@ namespace reactor::observability
         std::atomic<uint64_t> requestLatencyTotalUs_{0};
         std::atomic<uint64_t> requestLatencyMaxUs_{0};
     };
-} // namespace reactor::observability
-
+} // 命名空间 reactor::observability

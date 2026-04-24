@@ -4,7 +4,9 @@
 #include <string>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <string_view>
+#include <functional>
 
 #include "Channel.hpp"
 #include "EventLoop.hpp"
@@ -27,6 +29,11 @@ namespace reactor::net{
         void handleRead();
         void handleWrite();
         void handleClose();
+        bool init();
+        void setKeepAliveEnabled(bool enabled);
+        void setKeepAlivePolicy(uint32_t maxRequests, uint32_t idleTimeoutMs);
+        void setCloseCallback(std::function<void(int)> closeCb);
+        bool shouldCloseForIdle(int64_t nowMs) const;
 
         int fd()const;
         const std::string& name() const;
@@ -37,7 +44,6 @@ namespace reactor::net{
         
         TcpConnection(int fd, reactor::core::EventLoop* evLoop, std::string name);
         
-        bool init_();
         void destory_();
         void onChannelDestroyed_();
         bool isParseWaitTimeout_() const;
@@ -64,5 +70,12 @@ namespace reactor::net{
         std::chrono::steady_clock::time_point requestStartTime_;
         bool parseWaiting_ = false;
         bool requestTimingActive_ = false;
+        bool keepAliveEnabled_ = false;
+        bool keepAliveRequest_ = false;
+        uint32_t maxKeepAliveRequests_ = 100;
+        uint32_t keepAliveIdleTimeoutMs_ = 10000;
+        std::atomic<uint64_t> servedRequests_{0};
+        std::atomic<int64_t> lastActivityMs_{0};
+        std::function<void(int)> closeCallback_;
     };
 }
