@@ -1,3 +1,21 @@
 *.exe
-docs/*
-build/*
+*.o
+*.obj
+*.log
+
+main_run
+build/
+cmake-build-*/
+compile_commands.json
+
+# Runtime and benchmark outputs
+tests/bench_reports/*
+tests/benchmarks/*
+!tests/bench_reports/.gitkeep
+!tests/benchmarks/.gitkeep
+!tests/BENCHMARK_REFERENCE_COMPARISON_20260425.md
+
+# Local temp files
+*.swp
+*.swo
+*~
