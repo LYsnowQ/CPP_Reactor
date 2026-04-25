@@ -1,12 +1,18 @@
-SRC := $(shell find . -name "*.cpp" -not -path "./build/*")
-OBJ := $(SRC:.cpp=.o)
 TARGET := main_run
 
 CXX := g++
-CPPFLAGS := -I. -I./include
-CXXFLAGS := -std=c++20 -Wall -g
+CXXFLAGS := -std=c++20 -Wall -Wextra -g
+INCLUDE_DIRS := $(shell find include -type d)
+CPPFLAGS := $(addprefix -I,$(INCLUDE_DIRS)) -I./third_party
 LDFLAGS :=
 LDLIBS := -pthread
+
+SRC_DIR := src
+BUILD_DIR := build
+OBJ_DIR := $(BUILD_DIR)/obj
+
+SRC := $(shell find $(SRC_DIR) -type f -name "*.cpp")
+OBJ := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 
 .PHONY: all clean
 
@@ -15,8 +21,10 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-%.o: %.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJ)
+	rm -f $(TARGET)
+	rm -rf $(BUILD_DIR)
