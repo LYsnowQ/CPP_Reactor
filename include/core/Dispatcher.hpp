@@ -1,6 +1,6 @@
 #pragma once
-#include "Channel.hpp"
-#include "CoreStatus.hpp"
+#include "net/Channel.hpp"
+#include "core/CoreStatus.hpp"
 
 #include <cstdint>
 #include <memory>

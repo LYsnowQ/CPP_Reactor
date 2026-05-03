@@ -7,6 +7,16 @@ main_run
 build/
 cmake-build-*/
 compile_commands.json
+CMakeUserPresets.json
+CMakePresets.json
+conanbuild.sh
+conanrun.sh
+.conan/
+.conan2/
+.cache/
+third_party/conan/
+third_party/conan_home/
+third_party/deps/
 
 # Runtime and benchmark outputs
 tests/bench_reports/*

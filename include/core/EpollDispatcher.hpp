@@ -1,7 +1,7 @@
 #pragma once
 
-#include "EventLoop.hpp"
-#include "Dispatcher.hpp"
+#include "core/EventLoop.hpp"
+#include "core/Dispatcher.hpp"
 #include <cstdint>
 #include <vector>
 #include <sys/epoll.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Dispatcher.hpp"
+#include "core/Dispatcher.hpp"
 #include <cstdint>
 #include <sys/poll.h>
 

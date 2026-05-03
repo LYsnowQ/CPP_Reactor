@@ -1,18 +1,20 @@
-#include "Dispatcher.hpp"
-#include "EpollDispatcher.hpp"
-#include "PollDispatcher.hpp"
-#include "SelectDispatcher.hpp"
+#include "core/Dispatcher.hpp"
+#include "core/EpollDispatcher.hpp"
+#include "core/PollDispatcher.hpp"
+#include "core/SelectDispatcher.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <memory>
 #include <string>
 
-reactor::core::Dispatcher::Dispatcher(EventLoop* evLoop)
+namespace reactor::core
+{
+Dispatcher::Dispatcher(EventLoop* evLoop)
 :evLoop_(evLoop),channel_(nullptr)
 {}        
 
-std::unique_ptr<reactor::core::Dispatcher> reactor::core::createDispatcher(EventLoop* evLoop, DispatcherType type)
+std::unique_ptr<Dispatcher> createDispatcher(EventLoop* evLoop, DispatcherType type)
 {
     switch(type)
     {
@@ -27,7 +29,7 @@ std::unique_ptr<reactor::core::Dispatcher> reactor::core::createDispatcher(Event
     }
 }
 
-reactor::core::DispatcherType reactor::core::dispatcherTypeFromString(std::string_view name, DispatcherType fallback)
+DispatcherType dispatcherTypeFromString(std::string_view name, DispatcherType fallback)
 {
     std::string value(name);
     std::transform(
@@ -54,7 +56,7 @@ reactor::core::DispatcherType reactor::core::dispatcherTypeFromString(std::strin
     return fallback;
 }
 
-const char* reactor::core::dispatcherTypeToString(DispatcherType type)
+const char* dispatcherTypeToString(DispatcherType type)
 {
     switch(type)
     {
@@ -68,3 +70,5 @@ const char* reactor::core::dispatcherTypeToString(DispatcherType type)
         return "unknown";
     }
 }
+}
+// namespace reactor::core

@@ -6,8 +6,8 @@
 #include <map>
 #include <vector>
 #include <optional>
-#include "Buffer.hpp"
-#include "CoreStatus.hpp"
+#include "core/Buffer.hpp"
+#include "core/CoreStatus.hpp"
 
 
 

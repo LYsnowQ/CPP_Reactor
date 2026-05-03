@@ -1,4 +1,4 @@
-#include "HttpRequest.hpp"
+#include "protocol/HttpRequest.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -10,11 +10,13 @@
 #include <system_error>
 #include <sys/types.h>
 
-reactor::net::protocol::HttpRequest::HttpRequest(base::Buffer* dataPackage)
+namespace reactor::net::protocol
+{
+HttpRequest::HttpRequest(base::Buffer* dataPackage)
 :data_(dataPackage),method_(std::string()),url_(std::string()),version_(std::string()),curState_(HttpRequestState::kIdle)
 {}
 
-reactor::net::protocol::HttpRequest::ParseResult reactor::net::protocol::HttpRequest::parseRequest(
+HttpRequest::ParseResult HttpRequest::parseRequest(
     base::Buffer* data,
     std::unique_ptr<HttpRequest>* inFlight)
 {
@@ -53,7 +55,7 @@ reactor::net::protocol::HttpRequest::ParseResult reactor::net::protocol::HttpReq
     return {core::StatusCode::kOk, std::move(*holder), "ok", false};
 }
 
-std::string reactor::net::protocol::HttpRequest::getMethed()
+std::string HttpRequest::getMethed()
 {
     if (method_.length())
     {
@@ -63,7 +65,7 @@ std::string reactor::net::protocol::HttpRequest::getMethed()
 }
 
 
-std::string reactor::net::protocol::HttpRequest::getUrl()
+std::string HttpRequest::getUrl()
 {
     if (url_.length())
     {
@@ -73,7 +75,7 @@ std::string reactor::net::protocol::HttpRequest::getUrl()
 }
 
 
-std::string reactor::net::protocol::HttpRequest::version()
+std::string HttpRequest::version()
 {
     if (version_.length())
     {
@@ -83,25 +85,25 @@ std::string reactor::net::protocol::HttpRequest::version()
 }
 
 
-std::vector<std::pair<std::string,std::string>> reactor::net::protocol::HttpRequest::getHeader()
+std::vector<std::pair<std::string,std::string>> HttpRequest::getHeader()
 {
     return headers_;
 }
 
 
-std::string reactor::net::protocol::HttpRequest::getBody()
+std::string HttpRequest::getBody()
 {
     return body_;
 }
 
 /*
-uint32_t reactor::net::protocol::HttpRequest::getState()
+uint32_t HttpRequest::getState()
 {
     return curState_;
 }
 */         
     
-reactor::core::StatusCode reactor::net::protocol::HttpRequest::parse_()
+core::StatusCode HttpRequest::parse_()
 {
     if(curState_ == HttpRequestState::kParseDone)
     {
@@ -134,7 +136,7 @@ reactor::core::StatusCode reactor::net::protocol::HttpRequest::parse_()
     return core::StatusCode::kInvalid;
 }
 
-reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseLine_()
+core::StatusCode HttpRequest::parseLine_()
 { 
     curState_ = HttpRequestState::kParseReqLine;
 
@@ -176,7 +178,7 @@ reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseLine_()
     return core::StatusCode::kOk;
 }
 
-reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseHead_()
+core::StatusCode HttpRequest::parseHead_()
 {
     curState_ = HttpRequestState::kParseReqHeaders;
     if(data_->find("\r\n\r\n") == std::string::npos)
@@ -227,7 +229,7 @@ reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseHead_()
 }
 
 
-reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseBody_()
+core::StatusCode HttpRequest::parseBody_()
 {
     curState_ = HttpRequestState::kParseReqBody;
     bodyTooLarge_ = false;
@@ -276,7 +278,7 @@ reactor::core::StatusCode reactor::net::protocol::HttpRequest::parseBody_()
     return core::StatusCode::kOk;
 }
 
-std::optional<std::string> reactor::net::protocol::HttpRequest::findHeader_(std::string_view key) const
+std::optional<std::string> HttpRequest::findHeader_(std::string_view key) const
 {
     auto toLower = [](std::string_view in)
     {
@@ -733,3 +735,5 @@ void sendDir(const char* dirName,struct Buffer* sendBuffer, int cfd)
     free(namelist);
 }
 #endif
+}
+// namespace reactor::net::protocol

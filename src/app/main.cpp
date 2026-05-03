@@ -6,9 +6,9 @@
 
 #include <unistd.h>
 
-#include "Dispatcher.hpp"
-#include "StaticFileAdapter.hpp"
-#include "TcpServer.hpp"
+#include "core/Dispatcher.hpp"
+#include "adapter/StaticFileAdapter.hpp"
+#include "net/TcpServer.hpp"
 #include "spdlog/spdlog.h"
 
 int main(int argc, const char** argv)

@@ -1,6 +1,6 @@
-#include "EventLoop.hpp"
-#include "Channel.hpp"
-#include "Dispatcher.hpp"
+#include "core/EventLoop.hpp"
+#include "net/Channel.hpp"
+#include "core/Dispatcher.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -19,11 +19,13 @@
 #include <stdexcept>
 
 
-reactor::core::EventLoop::EventLoop():EventLoop("MainThread")
+namespace reactor::core
+{
+EventLoop::EventLoop():EventLoop("MainThread")
 {}
 
 
-reactor::core::EventLoop::EventLoop(std::string name, DispatcherType type)
+EventLoop::EventLoop(std::string name, DispatcherType type)
 :
 threadName_(name),
 threadID_(std::this_thread::get_id())
@@ -70,7 +72,7 @@ threadID_(std::this_thread::get_id())
 }
 
 
-reactor::core::EventLoop::~EventLoop()
+EventLoop::~EventLoop()
 {
     if(socketPair_[1]>=0)
     {
@@ -80,7 +82,7 @@ reactor::core::EventLoop::~EventLoop()
 
 
 // 本地写数据
-void reactor::core::EventLoop::taskWakeup_()
+void EventLoop::taskWakeup_()
 {
     char msg = 'w';
     ssize_t n = write(socketPair_[1], &msg, sizeof(msg));
@@ -88,7 +90,7 @@ void reactor::core::EventLoop::taskWakeup_()
 }
 
 // 本地读数据
-void reactor::core::EventLoop::readLocalMessage_()
+void EventLoop::readLocalMessage_()
 {
     char buf[256];
     while(true)
@@ -102,7 +104,7 @@ void reactor::core::EventLoop::readLocalMessage_()
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::run()
+StatusCode EventLoop::run()
 {
     isQuit_.store(false);//延迟启动非初始化时启动
     if(std::this_thread::get_id() != threadID_)
@@ -124,7 +126,7 @@ reactor::core::StatusCode reactor::core::EventLoop::run()
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::active(int fd,uint32_t event)
+StatusCode EventLoop::active(int fd,uint32_t event)
 {
     if(fd < 0)
     {
@@ -165,7 +167,7 @@ reactor::core::StatusCode reactor::core::EventLoop::active(int fd,uint32_t event
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::addTask(std::unique_ptr<net::Channel> channel,ChannelOP type)
+StatusCode EventLoop::addTask(std::unique_ptr<net::Channel> channel,ChannelOP type)
 {
     {    
         std::lock_guard<std::mutex> lk(mutex_);
@@ -191,7 +193,7 @@ reactor::core::StatusCode reactor::core::EventLoop::addTask(std::unique_ptr<net:
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::addTask(int fd,ChannelOP type)
+StatusCode EventLoop::addTask(int fd,ChannelOP type)
 {
     if(fd < 0)
     {
@@ -226,12 +228,12 @@ reactor::core::StatusCode reactor::core::EventLoop::addTask(int fd,ChannelOP typ
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::destroyTask(int fd)
+StatusCode EventLoop::destroyTask(int fd)
 {
     return addTask(fd, ChannelOP::DELETE);
 }
 
-reactor::core::StatusCode reactor::core::EventLoop::processTaskQ()
+StatusCode EventLoop::processTaskQ()
 {
     std::queue<ChannelElement> localQ;
     {
@@ -270,7 +272,7 @@ reactor::core::StatusCode reactor::core::EventLoop::processTaskQ()
 }
 
 
-void reactor::core::EventLoop::shutdown()
+void EventLoop::shutdown()
 {
     isQuit_.store(true);
     taskWakeup_();
@@ -278,7 +280,7 @@ void reactor::core::EventLoop::shutdown()
 
 
 
-reactor::core::StatusCode reactor::core::EventLoop::add_(std::unique_ptr<net::Channel> channel)
+StatusCode EventLoop::add_(std::unique_ptr<net::Channel> channel)
 {
     int fd = channel -> getSocket();
     
@@ -298,7 +300,7 @@ reactor::core::StatusCode reactor::core::EventLoop::add_(std::unique_ptr<net::Ch
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::remove_(int fd)
+StatusCode EventLoop::remove_(int fd)
 {
     if(channelMap_.find(fd) == channelMap_.end())
     {
@@ -314,7 +316,7 @@ reactor::core::StatusCode reactor::core::EventLoop::remove_(int fd)
 }
 
 
-reactor::core::StatusCode reactor::core::EventLoop::modify_(int fd)
+StatusCode EventLoop::modify_(int fd)
 {
     if(channelMap_.find(fd)==channelMap_.end())
     {
@@ -324,3 +326,5 @@ reactor::core::StatusCode reactor::core::EventLoop::modify_(int fd)
     StatusCode ret = dispatcher_->modify();
     return ret;
 }
+}
+// namespace reactor::core

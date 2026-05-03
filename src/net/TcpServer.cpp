@@ -10,13 +10,15 @@
 #include <fcntl.h>
 #include <chrono>
 
-#include "TcpConnection.hpp"
-#include "TcpServer.hpp"    
+#include "net/TcpConnection.hpp"
+#include "net/TcpServer.hpp"    
 #include "spdlog/spdlog.h"
 
 
 
-reactor::net::TcpServer::TcpServer(
+namespace reactor::net
+{
+TcpServer::TcpServer(
     uint16_t port,
     uint32_t maxThread,
     core::DispatcherType dispatcherType,
@@ -72,22 +74,22 @@ reactor::net::TcpServer::TcpServer(
     {
         fcntl(lfd_, F_SETFL, flags | O_NONBLOCK);
     }
-    threadPool_ = std::make_unique<reactor::net::IOThreadPool>(maxThread, dispatcherType_);
+    threadPool_ = std::make_unique<IOThreadPool>(maxThread, dispatcherType_);
     lastMetricsSnapshot_ = reactor::observability::Metrics::instance().snapshot();
 }
 
-reactor::net::TcpServer::~TcpServer()
+TcpServer::~TcpServer()
 {
     stop();
 }
 
-void reactor::net::TcpServer::setRequestHandler(RequestHandler handler)
+void TcpServer::setRequestHandler(RequestHandler handler)
 {
     requestHandler_ = std::move(handler);
 }
 
 
-reactor::core::StatusCode reactor::net::TcpServer::run()
+core::StatusCode TcpServer::run()
 {
     if(isRunning_.exchange(true))
     {
@@ -111,7 +113,7 @@ reactor::core::StatusCode reactor::net::TcpServer::run()
     // return core::StatusCode::kOk;
 }
 
-reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
+core::StatusCode TcpServer::acceptConnection()
 {
     while(isRunning_.load())
     {
@@ -138,7 +140,7 @@ reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
         }
         reactor::observability::Metrics::instance().onAcceptOk();
 
-        reactor::core::EventLoop* evloop = threadPool_->getNextLoop();
+        core::EventLoop* evloop = threadPool_->getNextLoop();
         if(!evloop)
         {
             close(cfd);
@@ -146,7 +148,7 @@ reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
             continue;
         }
 
-        auto conn = reactor::net::TcpConnection::create(cfd,evloop);
+        auto conn = TcpConnection::create(cfd,evloop);
         if(!conn)
         {
             close(cfd);
@@ -154,7 +156,7 @@ reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
             continue;
         }
 
-        reactor::net::TcpConnection* connRaw = nullptr;
+        TcpConnection* connRaw = nullptr;
         {
             std::lock_guard<std::mutex> lk(connsMutex_);
             auto [it, inserted] = conns_.emplace(cfd,std::move(conn));
@@ -193,7 +195,7 @@ reactor::core::StatusCode reactor::net::TcpServer::acceptConnection()
     return core::StatusCode::kOk;
 }
 
-reactor::core::StatusCode reactor::net::TcpServer::stop()
+core::StatusCode TcpServer::stop()
 {
     if(!isRunning_.exchange(false))
     {
@@ -226,7 +228,7 @@ reactor::core::StatusCode reactor::net::TcpServer::stop()
     return core::StatusCode::kOk;
 }
 
-void reactor::net::TcpServer::cleanupClosedConnections_()
+void TcpServer::cleanupClosedConnections_()
 {
     if(keepAliveEnabled_)
     {
@@ -267,7 +269,7 @@ void reactor::net::TcpServer::cleanupClosedConnections_()
     reactor::observability::Metrics::instance().onConnectionsClosed(removed);
 }
 
-void reactor::net::TcpServer::enqueueClosedConnection_(int fd)
+void TcpServer::enqueueClosedConnection_(int fd)
 {
     if(fd < 0)
     {
@@ -277,7 +279,7 @@ void reactor::net::TcpServer::enqueueClosedConnection_(int fd)
     pendingCloseFds_.push_back(fd);
 }
 
-void reactor::net::TcpServer::logMetricsIfNeeded_()
+void TcpServer::logMetricsIfNeeded_()
 {
     constexpr auto kLogInterval = std::chrono::seconds(5);
     const auto now = std::chrono::steady_clock::now();
@@ -328,3 +330,5 @@ void reactor::net::TcpServer::logMetricsIfNeeded_()
     lastMetricsSnapshot_ = cur;
     lastMetricsLogTime_ = now;
 }
+}
+// namespace reactor::net

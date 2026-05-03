@@ -9,8 +9,8 @@
 #include <map>
 #include <mutex>
 #include <atomic>
-#include "Channel.hpp"
-#include "Dispatcher.hpp"
+#include "net/Channel.hpp"
+#include "core/Dispatcher.hpp"
 
 namespace reactor::core
 {

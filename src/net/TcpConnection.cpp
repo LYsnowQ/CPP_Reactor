@@ -1,9 +1,9 @@
-#include "TcpConnection.hpp"
-#include "Channel.hpp"
-#include "EventLoop.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
-#include "Metrics.hpp"
+#include "net/TcpConnection.hpp"
+#include "net/Channel.hpp"
+#include "core/EventLoop.hpp"
+#include "protocol/HttpRequest.hpp"
+#include "protocol/HttpResponse.hpp"
+#include "observability/Metrics.hpp"
 
 #include <cerrno>
 #include <cctype>
@@ -14,6 +14,8 @@
 
 #include "spdlog/spdlog.h"
 
+namespace reactor::net
+{
 namespace
 {
     int64_t nowSteadyMs_()
@@ -34,7 +36,7 @@ namespace
         return out;
     }
 
-    bool shouldKeepAlive_(reactor::net::protocol::HttpRequest& req)
+    bool shouldKeepAlive_(protocol::HttpRequest& req)
     {
         const auto versionLower = toLowerCopy_(req.version());
         const auto headers = req.getHeader();
@@ -58,16 +60,16 @@ namespace
 }
 
 
-std::unique_ptr<reactor::net::TcpConnection> reactor::net::TcpConnection::create(int fd,core::EventLoop* loop)
+std::unique_ptr<TcpConnection> TcpConnection::create(int fd,core::EventLoop* loop)
 {
-    auto conn = std::unique_ptr<reactor::net::TcpConnection>(
+    auto conn = std::unique_ptr<TcpConnection>(
                 new TcpConnection(fd,loop,"Connection-"+std::to_string(fd))
                 );
     return conn;
 }
 
 
-reactor::net::TcpConnection::TcpConnection(int fd,core::EventLoop* loop,std::string name)
+TcpConnection::TcpConnection(int fd,core::EventLoop* loop,std::string name)
     :fd_(fd),
     state_(kConnecting),
     loop_(loop),
@@ -80,29 +82,29 @@ reactor::net::TcpConnection::TcpConnection(int fd,core::EventLoop* loop,std::str
     lastActivityMs_.store(nowSteadyMs_(), std::memory_order_relaxed);
 }
 
-reactor::net::TcpConnection::~TcpConnection()
+TcpConnection::~TcpConnection()
 {
     destory_();
 }
 
-int reactor::net::TcpConnection::fd() const
+int TcpConnection::fd() const
 {
     return fd_;
 }
 
-const std::string& reactor::net::TcpConnection::name() const
+const std::string& TcpConnection::name() const
 {
     return name_;
 }
 
-void reactor::net::TcpConnection::destory_()
+void TcpConnection::destory_()
 {
     channel_ = nullptr;
     state_ = kDisconnected;
 }
 
 
-bool reactor::net::TcpConnection::init()
+bool TcpConnection::init()
 {
     auto ch = std::make_unique<net::Channel>(
                 fd_,
@@ -118,28 +120,28 @@ bool reactor::net::TcpConnection::init()
     return true;
 }
 
-void reactor::net::TcpConnection::setKeepAliveEnabled(bool enabled)
+void TcpConnection::setKeepAliveEnabled(bool enabled)
 {
     keepAliveEnabled_ = enabled;
 }
 
-void reactor::net::TcpConnection::setKeepAlivePolicy(uint32_t maxRequests, uint32_t idleTimeoutMs)
+void TcpConnection::setKeepAlivePolicy(uint32_t maxRequests, uint32_t idleTimeoutMs)
 {
     maxKeepAliveRequests_ = (maxRequests == 0) ? 1U : maxRequests;
     keepAliveIdleTimeoutMs_ = (idleTimeoutMs == 0) ? 1U : idleTimeoutMs;
 }
 
-void reactor::net::TcpConnection::setRequestHandler(RequestHandler handler)
+void TcpConnection::setRequestHandler(RequestHandler handler)
 {
     requestHandler_ = std::move(handler);
 }
 
-void reactor::net::TcpConnection::setCloseCallback(std::function<void(int)> closeCb)
+void TcpConnection::setCloseCallback(std::function<void(int)> closeCb)
 {
     closeCallback_ = std::move(closeCb);
 }
 
-bool reactor::net::TcpConnection::shouldCloseForIdle(int64_t nowMs) const
+bool TcpConnection::shouldCloseForIdle(int64_t nowMs) const
 {
     if(!keepAliveEnabled_)
     {
@@ -157,12 +159,12 @@ bool reactor::net::TcpConnection::shouldCloseForIdle(int64_t nowMs) const
     return (nowMs - lastMs) >= static_cast<int64_t>(keepAliveIdleTimeoutMs_);
 }
 
-bool reactor::net::TcpConnection::isDisconnected() const
+bool TcpConnection::isDisconnected() const
 {
     return state_.load() == kDisconnected;
 }
 
-void reactor::net::TcpConnection::onChannelDestroyed_()
+void TcpConnection::onChannelDestroyed_()
 {
     channel_ = nullptr;
     state_.store(kDisconnected);
@@ -173,7 +175,7 @@ void reactor::net::TcpConnection::onChannelDestroyed_()
 }
 
 
-void reactor::net::TcpConnection::handleRead()
+void TcpConnection::handleRead()
 {
     int savedErr = 0;
     const ssize_t n = readBuffer_.readFd(channel_->getSocket(), &savedErr);
@@ -268,13 +270,13 @@ void reactor::net::TcpConnection::handleRead()
 
 }
 
-bool reactor::net::TcpConnection::isParseWaitTimeout_() const
+bool TcpConnection::isParseWaitTimeout_() const
 {
     constexpr auto kParseWaitTimeout = std::chrono::seconds(5);
     return std::chrono::steady_clock::now() - parseWaitStart_ >= kParseWaitTimeout;
 }
 
-void reactor::net::TcpConnection::appendSimpleResponse_(
+void TcpConnection::appendSimpleResponse_(
     int statusCode,
     std::string_view reasonPhrase,
     std::string_view body,
@@ -304,7 +306,7 @@ void reactor::net::TcpConnection::appendSimpleResponse_(
     }
 }
 
-void reactor::net::TcpConnection::queueSimpleResponse_(int statusCode, std::string_view reasonPhrase)
+void TcpConnection::queueSimpleResponse_(int statusCode, std::string_view reasonPhrase)
 {
     appendSimpleResponse_(statusCode, reasonPhrase, "", "text/plain; charset=utf-8");
     if(channel_)
@@ -315,7 +317,7 @@ void reactor::net::TcpConnection::queueSimpleResponse_(int statusCode, std::stri
 }
 
 
-void reactor::net::TcpConnection::handleWrite()
+void TcpConnection::handleWrite()
 {
     if(writeBuffer_.readableBytes() == 0)
     {
@@ -361,7 +363,7 @@ void reactor::net::TcpConnection::handleWrite()
 }
 
 
-void reactor::net::TcpConnection::handleClose()
+void TcpConnection::handleClose()
 {
     const auto cur = state_.load();
     if(cur == kDisconnected || cur == kDisconnecting)
@@ -486,3 +488,5 @@ int tcpConnectionDestory(void* arg)
     return 0;
 }
 #endif
+}
+// namespace reactor::net

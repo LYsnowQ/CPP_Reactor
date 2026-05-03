@@ -9,10 +9,10 @@
 #include <chrono>
 #include <vector>
 
-#include "TcpConnection.hpp"
-#include "EventLoop.hpp"
-#include "IOThreadPool.hpp"
-#include "Metrics.hpp"
+#include "net/TcpConnection.hpp"
+#include "core/EventLoop.hpp"
+#include "net/IOThreadPool.hpp"
+#include "observability/Metrics.hpp"
 
 namespace reactor::net{
     

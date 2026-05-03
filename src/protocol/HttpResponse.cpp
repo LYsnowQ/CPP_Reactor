@@ -1,4 +1,4 @@
-#include "HttpResponse.hpp"
+#include "protocol/HttpResponse.hpp"
 
 #include <cstdint>
 #include <cstdlib>
@@ -7,13 +7,15 @@
 #include <system_error>
 #include <stdexcept>
 
-reactor::net::protocol::HttpResponse::HttpResponse(base::Buffer* buffer)
+namespace reactor::net::protocol
+{
+HttpResponse::HttpResponse(base::Buffer* buffer)
 :ready_(15),response_(buffer)
 {
     checkReady_();
 }
 
-void reactor::net::protocol::HttpResponse::setStateLine(const std::string& version,uint32_t status,const std::string& statusMsg)
+void HttpResponse::setStateLine(const std::string& version,uint32_t status,const std::string& statusMsg)
 {
     if(version == "")
     {
@@ -26,7 +28,7 @@ void reactor::net::protocol::HttpResponse::setStateLine(const std::string& versi
 }
  
 
-void reactor::net::protocol::HttpResponse::addHeader(std::string key,std::string value)
+void HttpResponse::addHeader(std::string key,std::string value)
 {
     if(key == "" || value == "")
     { 
@@ -37,13 +39,13 @@ void reactor::net::protocol::HttpResponse::addHeader(std::string key,std::string
 }
 
 
-void reactor::net::protocol::HttpResponse::addfile(std::string file)
+void HttpResponse::addfile(std::string file)
 {//只传文件名，后续发送时再打开处理
     files_.emplace_back(std::move(file));
 }
 
 
-uint16_t reactor::net::protocol::HttpResponse::getCheckReady()
+uint16_t HttpResponse::getCheckReady()
 {
     checkReady_();
     if(ready_ == static_cast<uint16_t>(ReadyCode::Ready))
@@ -76,7 +78,7 @@ uint16_t reactor::net::protocol::HttpResponse::getCheckReady()
 
 
 
-void reactor::net::protocol::HttpResponse::checkReady_()
+void HttpResponse::checkReady_()
 {
     if(!response_)
     {
@@ -180,3 +182,5 @@ void httpResponsePrepareMsg(struct HttpResponse* response, struct Buffer* sendBu
     }
 }
 #endif
+}
+// namespace reactor::net::protocol

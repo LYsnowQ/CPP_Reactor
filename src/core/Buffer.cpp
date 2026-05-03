@@ -5,48 +5,50 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "Buffer.hpp"
+#include "core/Buffer.hpp"
 
 
-reactor::base::Buffer::Buffer()
+namespace reactor::base
+{
+Buffer::Buffer()
 :buffer_(kCheapPrepend+kInitialSize),
 readIndex_(kCheapPrepend),
 writeIndex_(kCheapPrepend)
 {}
 
 
-size_t reactor::base::Buffer::readableBytes() const
+size_t Buffer::readableBytes() const
 {
     return writeIndex_ - readIndex_;
 }
 
 
-size_t reactor::base::Buffer::writeableBytes() const
+size_t Buffer::writeableBytes() const
 {
     return buffer_.size() - writeIndex_;
 }
 
 
-size_t reactor::base::Buffer::prependableBytes() const
+size_t Buffer::prependableBytes() const
 {
     return readIndex_;
 }
 
 
-const char* reactor::base::Buffer::peek() const
+const char* Buffer::peek() const
 {
     return begin_() + readIndex_;
 }
 
 
-std::string::size_type reactor::base::Buffer::find(const std::string_view substr) const
+std::string::size_type Buffer::find(const std::string_view substr) const
 {
     auto buffer = getStringView(readableBytes());
     return buffer.find(substr);//由于读取默认都是从未消费开始即readIndex_开始，所有这里返回的都是相对值 
 }
 
 
-std::string::size_type reactor::base::Buffer::find(const std::string_view substr,size_t offset) const
+std::string::size_type Buffer::find(const std::string_view substr,size_t offset) const
 {
     const auto readable = readableBytes();
     if(offset >= readable) 
@@ -64,13 +66,13 @@ std::string::size_type reactor::base::Buffer::find(const std::string_view substr
 }
 
 
-void reactor::base::Buffer::append(const std::string& str)
+void Buffer::append(const std::string& str)
 {
     append(str.data(),str.size());
 }
 
 
-void reactor::base::Buffer::append(const char* data,size_t len)
+void Buffer::append(const char* data,size_t len)
 {
     ensureWriteableBytes_(len);
     std::copy(data,data+len,beginWrite_());
@@ -78,7 +80,7 @@ void reactor::base::Buffer::append(const char* data,size_t len)
 }
         
        
-void reactor::base::Buffer::retrieve(size_t len)
+void Buffer::retrieve(size_t len)
 {
     if(len < readableBytes())
     {
@@ -91,21 +93,21 @@ void reactor::base::Buffer::retrieve(size_t len)
 }
 
 
-void reactor::base::Buffer::retrieveAll()
+void Buffer::retrieveAll()
 {
     readIndex_ = kCheapPrepend;
     writeIndex_ = kCheapPrepend;
 }
 
 
-std::string_view reactor::base::Buffer::getStringView(size_t len) const
+std::string_view Buffer::getStringView(size_t len) const
 {
     if(len > readableBytes()) return "";
     return std::string_view(&buffer_[readIndex_],len);    
 }
 
 
-std::string_view reactor::base::Buffer::getStringView(size_t offset,size_t len) const
+std::string_view Buffer::getStringView(size_t offset,size_t len) const
 {
     const auto readable = readableBytes();
     if(offset > readable || len > readable - offset) return "";
@@ -113,7 +115,7 @@ std::string_view reactor::base::Buffer::getStringView(size_t offset,size_t len) 
 }
 
 
-std::string reactor::base::Buffer::retrieveAsString(size_t len)
+std::string Buffer::retrieveAsString(size_t len)
 {
     if(len > readableBytes()) 
     {
@@ -125,12 +127,12 @@ std::string reactor::base::Buffer::retrieveAsString(size_t len)
 }
 
 
-std::string reactor::base::Buffer::retrieveAllString()
+std::string Buffer::retrieveAllString()
 {
     return retrieveAsString(readableBytes());
 }
         
-ssize_t reactor::base::Buffer::readFd(int fd, int* saved_errno)
+ssize_t Buffer::readFd(int fd, int* saved_errno)
 {
     char extraBuf[1024*32];//32K额外缓冲区
     struct iovec vec[2];
@@ -161,7 +163,7 @@ ssize_t reactor::base::Buffer::readFd(int fd, int* saved_errno)
 }
 
 
-ssize_t reactor::base::Buffer::writeFd(int fd)
+ssize_t Buffer::writeFd(int fd)
 {
     const ssize_t n = ::write(fd, peek(), readableBytes());
     if(n > 0)
@@ -172,19 +174,19 @@ ssize_t reactor::base::Buffer::writeFd(int fd)
 }
 
 
-char* reactor::base::Buffer::begin_()
+char* Buffer::begin_()
 {
     return &*buffer_.begin();        
 }
 
 
-const char* reactor::base::Buffer::begin_()const
+const char* Buffer::begin_()const
 {
     return &*buffer_.begin();
 }
 
 
-char* reactor::base::Buffer::beginWrite_()
+char* Buffer::beginWrite_()
 {
     return begin_() + writeIndex_;
 }
@@ -192,7 +194,7 @@ char* reactor::base::Buffer::beginWrite_()
 
 
 
-void reactor::base::Buffer::ensureWriteableBytes_(size_t len)
+void Buffer::ensureWriteableBytes_(size_t len)
 {
     if(writeableBytes() < len)
     {
@@ -201,7 +203,7 @@ void reactor::base::Buffer::ensureWriteableBytes_(size_t len)
 }
 
 
-void reactor::base::Buffer::makeSpace_(size_t len)
+void Buffer::makeSpace_(size_t len)
 {
     if(prependableBytes() + writeableBytes() < len + kCheapPrepend )
     {
@@ -218,3 +220,5 @@ void reactor::base::Buffer::makeSpace_(size_t len)
         writeIndex_ = readIndex_ + readable;
     }
 }
+}
+// namespace reactor::base

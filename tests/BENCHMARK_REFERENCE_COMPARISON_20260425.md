@@ -11,30 +11,26 @@
 
 ## 2. 最新本机压测结果（本轮）
 数据来源：
-- `tests/benchmarks/bench_matrix_20260425_local.md`
-- `tests/benchmarks/bench_gradient_20260425_local.md`
+- `tests/benchmarks/bench_profile_M_20260425.md`
 
 关键结论（取核心 case）：
 
 | case | 场景 | req/sec | latency_avg | 备注 |
 |---|---|---:|---|---|
-| E1 | epoll, keepalive, io=1, c=50 | 6835.98 | 7.30ms | 低线程基线 |
-| E2 | epoll, keepalive, io=4, c=100 | 22368.42 | 4.43ms | 中并发主力段 |
-| E3 | epoll, keepalive, io=8, c=200 | 23869.16 | 6.10ms | 有 timeout=200 抖动 |
-| E4 | epoll, close, io=8, c=200 | 20865.69 | 7.22ms | close 低于 keepalive |
-| G3 | epoll, keepalive, io=8, c=200 | 33260.26 | 5.85ms | 同级条件下更高，说明有波动 |
-| G4 | epoll, keepalive, io=8, c=400 | 28762.07 | 13.91ms | 并发升高后时延明显上升 |
+| M1 | epoll, keepalive, io=4, c=150 | 26819.49 | 5.46ms | M档位稳定参考 |
+| M2 | epoll, keepalive, io=6, c=240 | 26330.98 | 7.10ms | 有 timeout 抖动 |
+| M3 | epoll, close, io=6, c=240 | 20912.54 | 8.29ms | close 低于 keepalive |
+| M4 | poll, keepalive, io=6, c=240 | 29262.83 | 8.34ms | poll 对照样本 |
 
-## 3. 与前一轮历史结果对照（同 case）
+## 3. 与前一轮历史结果对照
 历史基线来源：
 - `tests/bench_reports/benchmark_full_20260425_130319.txt`（E1~E4）
 
 | case | 历史 req/sec | 本轮 req/sec | 变化 |
 |---|---:|---:|---:|
-| E1 | 6652.53 | 6835.98 | +2.76% |
-| E2 | 23959.93 | 22368.42 | -6.64% |
-| E3 | 34796.02 | 23869.16 | -31.40% |
-| E4 | 19839.42 | 20865.69 | +5.17% |
+| E2 vs M1 | 23959.93 | 26819.49 | +11.93% |
+| E3 vs M2 | 34796.02 | 26330.98 | -24.33% |
+| E4 vs M3 | 19839.42 | 20912.54 | +5.41% |
 
 解读：
 - E1/E4 小幅提升，E2 轻微回落，E3 明显回落且伴随 timeout，说明高并发段稳定性仍需继续收敛。
@@ -75,7 +71,6 @@
   - `bash scripts/bench_server_profiles.sh /project/CPPReactor LOCAL_MAX /project/CPPReactor/tests/benchmarks/bench_profile_local_max.md 15s`
 
 ## 7. 产物位置（已统一到 tests）
-- 矩阵报告：`tests/benchmarks/bench_matrix_20260425_local.md`
-- 梯度报告：`tests/benchmarks/bench_gradient_20260425_local.md`
+- 档位报告：`tests/benchmarks/bench_profile_M_20260425.md`
 - 历史全量 txt：`tests/bench_reports/benchmark_full_20260425_130319.txt`
 - 本说明：`tests/BENCHMARK_REFERENCE_COMPARISON_20260425.md`

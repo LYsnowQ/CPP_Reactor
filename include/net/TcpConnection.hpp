@@ -8,11 +8,11 @@
 #include <string_view>
 #include <functional>
 
-#include "Channel.hpp"
-#include "EventLoop.hpp"
-#include "Buffer.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
+#include "net/Channel.hpp"
+#include "core/EventLoop.hpp"
+#include "core/Buffer.hpp"
+#include "protocol/HttpRequest.hpp"
+#include "protocol/HttpResponse.hpp"
 
 namespace reactor::net{
     class TcpConnection

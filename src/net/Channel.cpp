@@ -1,8 +1,10 @@
-#include "Channel.hpp"
+#include "net/Channel.hpp"
 #include <cstdint>
 #include <unistd.h>
 
-reactor::net::Channel::Channel(int fd,FDEvent events,Callback readCallback,Callback writeCallback,Callback destroyCallback)
+namespace reactor::net
+{
+Channel::Channel(int fd,FDEvent events,Callback readCallback,Callback writeCallback,Callback destroyCallback)
     :fd_(fd),
     events_(static_cast<uint32_t>(events)),
     readCallback_(std::move(readCallback)),
@@ -11,7 +13,7 @@ reactor::net::Channel::Channel(int fd,FDEvent events,Callback readCallback,Callb
 {}
 
 
-reactor::net::Channel::~Channel()
+Channel::~Channel()
 {
     if(fd_ >= 0)
     {
@@ -21,44 +23,44 @@ reactor::net::Channel::~Channel()
 }
 
 
-bool reactor::net::Channel::haveReadCallback()
+bool Channel::haveReadCallback()
 {
     return readCallback_ ? true : false;
 }
 
 
-bool reactor::net::Channel::haveWriteCallback()
+bool Channel::haveWriteCallback()
 {
     return writeCallback_ ? true : false;
 }
 
 
-bool reactor::net::Channel::haveDestroyCallback()
+bool Channel::haveDestroyCallback()
 {
     return destroyCallback_ ? true : false;
 }
 
 
-void reactor::net::Channel::readFunc()
+void Channel::readFunc()
 {
     if(readCallback_)readCallback_();
 }
 
 
-void reactor::net::Channel::writeFunc()
+void Channel::writeFunc()
 {
     if(writeCallback_)writeCallback_();
 }
 
 
-void reactor::net::Channel::destroyFunc()
+void Channel::destroyFunc()
 {
     if(destroyCallback_)destroyCallback_();
 }
 
 
 
-void reactor::net::Channel::writeEventEnable(bool flag)
+void Channel::writeEventEnable(bool flag)
 {
     if(flag)
     {
@@ -71,13 +73,15 @@ void reactor::net::Channel::writeEventEnable(bool flag)
 }
 
 
-uint32_t reactor::net::Channel::getEvent() const
+uint32_t Channel::getEvent() const
 {
     return events_;
 }
    
 
-int reactor::net::Channel::getSocket() const
+int Channel::getSocket() const
 {
     return fd_;
 }
+}
+// namespace reactor::net

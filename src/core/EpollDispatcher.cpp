@@ -1,6 +1,6 @@
-#include "EpollDispatcher.hpp"
-#include "Channel.hpp"
-#include "EventLoop.hpp"
+#include "core/EpollDispatcher.hpp"
+#include "net/Channel.hpp"
+#include "core/EventLoop.hpp"
 
 #include <cstdint>
 #include <sys/types.h>
@@ -11,7 +11,9 @@
 #include <cerrno>
 
 
-reactor::core::EpollDispatcher::EpollDispatcher(EventLoop* evLoop)
+namespace reactor::core
+{
+EpollDispatcher::EpollDispatcher(EventLoop* evLoop)
 :Dispatcher(evLoop),
 epfd_(-1),
 maxNode_(520),
@@ -30,7 +32,7 @@ readyEvents_(maxNode_)
 }
 
 
-reactor::core::EpollDispatcher::~EpollDispatcher()
+EpollDispatcher::~EpollDispatcher()
 {
     if(epfd_ != -1)
     {
@@ -40,25 +42,25 @@ reactor::core::EpollDispatcher::~EpollDispatcher()
 }
 
 
-reactor::core::StatusCode reactor::core::EpollDispatcher::add() 
+StatusCode EpollDispatcher::add() 
 {
     return epollCtl_(EPOLL_CTL_ADD) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
 
 
-reactor::core::StatusCode reactor::core::EpollDispatcher::remove() 
+StatusCode EpollDispatcher::remove() 
 {
     return epollCtl_(EPOLL_CTL_DEL) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
 
 
-reactor::core::StatusCode reactor::core::EpollDispatcher::modify() 
+StatusCode EpollDispatcher::modify() 
 {
     return epollCtl_(EPOLL_CTL_MOD) == 0 ? StatusCode::kOk : StatusCode::kError;
 }
         
 
-reactor::core::StatusCode reactor::core::EpollDispatcher::dispatch(int timeout) 
+StatusCode EpollDispatcher::dispatch(int timeout) 
 {
     const int count = epoll_wait(epfd_, readyEvents_.data(), maxNode_, timeout*1000);
 
@@ -106,7 +108,7 @@ reactor::core::StatusCode reactor::core::EpollDispatcher::dispatch(int timeout)
 }
     
 
-int32_t reactor::core::EpollDispatcher::epollCtl_(int op)
+int32_t EpollDispatcher::epollCtl_(int op)
 {
     struct epoll_event ev;
     ev.data.fd = channel_->getSocket();
@@ -129,3 +131,5 @@ int32_t reactor::core::EpollDispatcher::epollCtl_(int op)
     }
     return 0;
 }
+}
+// namespace reactor::core

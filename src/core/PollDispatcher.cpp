@@ -1,6 +1,6 @@
-#include "PollDispatcher.hpp"
-#include "Channel.hpp"
-#include "EventLoop.hpp"
+#include "core/PollDispatcher.hpp"
+#include "net/Channel.hpp"
+#include "core/EventLoop.hpp"
 
 
 #include <cstdint>
@@ -11,7 +11,9 @@
 #include <cerrno>
 
 
-reactor::core::PollDispatcher::PollDispatcher(EventLoop* evLoop)
+namespace reactor::core
+{
+PollDispatcher::PollDispatcher(EventLoop* evLoop)
 :Dispatcher(evLoop),
 maxfd_(0)
 {
@@ -26,7 +28,7 @@ maxfd_(0)
 }
 
 
-reactor::core::PollDispatcher::~PollDispatcher()
+PollDispatcher::~PollDispatcher()
 {
     if(fds_ != nullptr)
     {
@@ -35,7 +37,7 @@ reactor::core::PollDispatcher::~PollDispatcher()
     
 }
 
-reactor::core::StatusCode reactor::core::PollDispatcher::add() 
+StatusCode PollDispatcher::add() 
 {
     int events = 0;
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -69,7 +71,7 @@ reactor::core::StatusCode reactor::core::PollDispatcher::add()
 }
 
 
-reactor::core::StatusCode reactor::core::PollDispatcher::remove() 
+StatusCode PollDispatcher::remove() 
 {
     int32_t i = 0;
     for(; i<maxNode_;i++)
@@ -92,7 +94,7 @@ reactor::core::StatusCode reactor::core::PollDispatcher::remove()
 }
 
 
-reactor::core::StatusCode reactor::core::PollDispatcher::modify() 
+StatusCode PollDispatcher::modify() 
 {
     int events = 0;
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -125,7 +127,7 @@ reactor::core::StatusCode reactor::core::PollDispatcher::modify()
 }
         
 
-reactor::core::StatusCode reactor::core::PollDispatcher::dispatch(int timeout) 
+StatusCode PollDispatcher::dispatch(int timeout) 
 {
     int count = poll(fds_, maxNode_, timeout*1000);
     if(count == -1)
@@ -165,3 +167,5 @@ reactor::core::StatusCode reactor::core::PollDispatcher::dispatch(int timeout)
     return StatusCode::kOk;
 }
     
+}
+// namespace reactor::core

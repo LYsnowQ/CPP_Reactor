@@ -1,6 +1,6 @@
-#include "SelectDispatcher.hpp"
-#include "Channel.hpp"
-#include "EventLoop.hpp"
+#include "core/SelectDispatcher.hpp"
+#include "net/Channel.hpp"
+#include "core/EventLoop.hpp"
 
 #include <cstdint>
 #include <sys/select.h>
@@ -11,7 +11,9 @@
 
 
 
-reactor::core::SelectDispatcher::SelectDispatcher(EventLoop* evLoop)
+namespace reactor::core
+{
+SelectDispatcher::SelectDispatcher(EventLoop* evLoop)
 :Dispatcher(evLoop)
 {
     FD_ZERO(&readSet_);
@@ -20,7 +22,7 @@ reactor::core::SelectDispatcher::SelectDispatcher(EventLoop* evLoop)
 }
 
 
-void reactor::core::SelectDispatcher::setFdSet_()
+void SelectDispatcher::setFdSet_()
 {
     int fd = channel_->getSocket();
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -34,7 +36,7 @@ void reactor::core::SelectDispatcher::setFdSet_()
     }
 }
 
-void reactor::core::SelectDispatcher::clearFdSet_()
+void SelectDispatcher::clearFdSet_()
 {
     int fd = channel_->getSocket();
     if(channel_->getEvent() & static_cast<uint32_t>(net::FDEvent::kReadEvent))
@@ -50,7 +52,7 @@ void reactor::core::SelectDispatcher::clearFdSet_()
 }
 
 
-reactor::core::StatusCode reactor::core::SelectDispatcher::add()
+StatusCode SelectDispatcher::add()
 {
     if(channel_->getSocket() >= maxSize_)
     {
@@ -62,14 +64,14 @@ reactor::core::StatusCode reactor::core::SelectDispatcher::add()
 }
 
 
-reactor::core::StatusCode reactor::core::SelectDispatcher::remove()
+StatusCode SelectDispatcher::remove()
 {
     clearFdSet_();
     return StatusCode::kOk;
 }
 
 
-reactor::core::StatusCode reactor::core::SelectDispatcher::modify()
+StatusCode SelectDispatcher::modify()
 {
     clearFdSet_();
     setFdSet_();
@@ -77,7 +79,7 @@ reactor::core::StatusCode reactor::core::SelectDispatcher::modify()
 }
 
 
-reactor::core::StatusCode reactor::core::SelectDispatcher::dispatch(int timeout)
+StatusCode SelectDispatcher::dispatch(int timeout)
 {
     struct timeval val;
     val.tv_sec = timeout;
@@ -113,3 +115,5 @@ reactor::core::StatusCode reactor::core::SelectDispatcher::dispatch(int timeout)
 
     return StatusCode::kOk;
 }
+}
+// namespace reactor::core

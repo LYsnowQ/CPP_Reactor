@@ -1,4 +1,4 @@
-#include "IOThreadPool.hpp"
+#include "net/IOThreadPool.hpp"
 
 
 #include <cstdint>
@@ -8,7 +8,9 @@
 
 
 
-reactor::net::IOThreadPool::IOThreadPool(uint32_t maxThreads, core::DispatcherType dispatcherType)
+namespace reactor::net
+{
+IOThreadPool::IOThreadPool(uint32_t maxThreads, core::DispatcherType dispatcherType)
 :loops_(maxThreads),
 latch_(maxThreads),
 loopIndex_(0),
@@ -17,13 +19,13 @@ dispatcherType_(dispatcherType)
 {}
 
 
-reactor::net::IOThreadPool::~IOThreadPool()
+IOThreadPool::~IOThreadPool()
 {
     stop();
 }
 
 
-void reactor::net::IOThreadPool::start()
+void IOThreadPool::start()
 {
     if(!threads_.empty())
     {
@@ -39,7 +41,7 @@ void reactor::net::IOThreadPool::start()
 }
 
 
-void reactor::net::IOThreadPool::stop()
+void IOThreadPool::stop()
 {
     if(threads_.empty())
     {
@@ -65,7 +67,7 @@ void reactor::net::IOThreadPool::stop()
 }
 
 
-reactor::core::EventLoop* reactor::net::IOThreadPool::getNextLoop()
+core::EventLoop* IOThreadPool::getNextLoop()
 {
     core::EventLoop* evLoop = loops_[loopIndex_].get();
     loopIndex_++;
@@ -73,11 +75,11 @@ reactor::core::EventLoop* reactor::net::IOThreadPool::getNextLoop()
     return evLoop;
 }
 
-//reactor::core::EventLoop* reactor::net::IOThreadPool::getLoop(uint32_t index)
+//reactor::core::EventLoop* IOThreadPool::getLoop(uint32_t index)
 //{}
 //暂时不实现长连接获取 
 
-void reactor::net::IOThreadPool::worker_(size_t index)
+void IOThreadPool::worker_(size_t index)
 {
     loops_[index] = std::make_unique<core::EventLoop>(std::string("worker"+std::to_string(index)), dispatcherType_);
     latch_.count_down();
@@ -85,3 +87,5 @@ void reactor::net::IOThreadPool::worker_(size_t index)
 }
 
  
+}
+// namespace reactor::net
