@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <type_traits>
 
-
-namespace reactor::net 
+namespace reactor::net
 {
-    enum class FDEvent:uint32_t
+    enum class FDEvent : uint32_t
     {
         kTimeout = 0x01,
         kReadEvent = 0x02,
@@ -17,22 +16,18 @@ namespace reactor::net
 
     class Channel
     {
-    public:
+      public:
         using Callback = std::function<void()>;
 
         // 初始化一个 Channel
-        Channel(int fd,
-                FDEvent events,
-                Callback readCallback ,
-                Callback writeCallback,
-                Callback destroyCallback
-                );
+        Channel(int fd, FDEvent events, Callback readCallback, Callback writeCallback,
+                Callback destroyCallback);
         ~Channel();
 
         void writeEventEnable(bool flag);
 
         inline bool isWriteEventEnable() const;
-        
+
         uint32_t getEvent() const;
         int getSocket() const;
 
@@ -44,7 +39,7 @@ namespace reactor::net
         bool haveWriteCallback();
         bool haveDestroyCallback();
 
-    private:
+      private:
         int fd_;
         uint32_t events_;
         Callback readCallback_;
@@ -54,8 +49,7 @@ namespace reactor::net
 
     bool Channel::isWriteEventEnable() const
     {
-        return events_ & static_cast<uint32_t>(FDEvent::kWriteEvent); 
+        return events_ & static_cast<uint32_t>(FDEvent::kWriteEvent);
     }
 
-        
-}//namespace reactor::net
+} // namespace reactor::net

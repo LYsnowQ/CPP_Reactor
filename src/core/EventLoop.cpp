@@ -18,313 +18,289 @@
 #include <fcntl.h>
 #include <stdexcept>
 
-
 namespace reactor::core
 {
-EventLoop::EventLoop():EventLoop("MainThread")
-{}
-
-
-EventLoop::EventLoop(std::string name, DispatcherType type)
-:
-threadName_(name),
-threadID_(std::this_thread::get_id())
-{
-    socketPair_[0] = -1;
-    socketPair_[1] = -1;
-    int32_t ret = socketpair(AF_UNIX,SOCK_STREAM,0,socketPair_);
-    if(ret == -1)
+    EventLoop::EventLoop() : EventLoop("MainThread")
     {
-        throw std::system_error(
-                errno,
-                std::system_category(),
-                "socketpair failed in EventLoop"
-                );
     }
 
-    // 线程唤醒使用非阻塞，防止跨线程阻塞
-    int flags0 = fcntl(socketPair_[0], F_GETFL, 0);
-    int flags1 = fcntl(socketPair_[1], F_GETFL, 0);
-    if(flags0 != -1)
+    EventLoop::EventLoop(std::string name, DispatcherType type)
+        : threadName_(name), threadID_(std::this_thread::get_id())
     {
-        fcntl(socketPair_[0], F_SETFL, flags0 | O_NONBLOCK);
-    }
-    if(flags1 != -1)
-    {
-        fcntl(socketPair_[1], F_SETFL, flags1 | O_NONBLOCK);
-    }
-    dispatcher_ = createDispatcher(this, type);
-    if(!dispatcher_)
-    {
-        throw std::runtime_error("create dispatcher failed");
-    }
-
-    auto obj = std::bind(&EventLoop::readLocalMessage_,this);
-    std::unique_ptr<net::Channel>channel =
-        std::make_unique<net::Channel>
-        (socketPair_[0],
-         net::FDEvent::kReadEvent,
-         obj,
-         nullptr,
-         nullptr
-        );
-    addTask(std::move(channel), ChannelOP::ADD);
-}
-
-
-EventLoop::~EventLoop()
-{
-    if(socketPair_[1]>=0)
-    {
-        close(socketPair_[1]);
-    }
-}
-
-
-// 本地写数据
-void EventLoop::taskWakeup_()
-{
-    char msg = 'w';
-    ssize_t n = write(socketPair_[1], &msg, sizeof(msg));
-    (void)n;
-}
-
-// 本地读数据
-void EventLoop::readLocalMessage_()
-{
-    char buf[256];
-    while(true)
-    {//避免信号堆积
-        ssize_t n = read(socketPair_[0], buf, sizeof(buf));
-        if(n <= 0)
+        socketPair_[0] = -1;
+        socketPair_[1] = -1;
+        int32_t ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair_);
+        if (ret == -1)
         {
-            break;
+            throw std::system_error(errno, std::system_category(),
+                                    "socketpair failed in EventLoop");
+        }
+
+        // 线程唤醒使用非阻塞，防止跨线程阻塞
+        int flags0 = fcntl(socketPair_[0], F_GETFL, 0);
+        int flags1 = fcntl(socketPair_[1], F_GETFL, 0);
+        if (flags0 != -1)
+        {
+            fcntl(socketPair_[0], F_SETFL, flags0 | O_NONBLOCK);
+        }
+        if (flags1 != -1)
+        {
+            fcntl(socketPair_[1], F_SETFL, flags1 | O_NONBLOCK);
+        }
+        dispatcher_ = createDispatcher(this, type);
+        if (!dispatcher_)
+        {
+            throw std::runtime_error("create dispatcher failed");
+        }
+
+        auto obj = std::bind(&EventLoop::readLocalMessage_, this);
+        std::unique_ptr<net::Channel> channel = std::make_unique<net::Channel>(
+            socketPair_[0], net::FDEvent::kReadEvent, obj, nullptr, nullptr);
+        addTask(std::move(channel), ChannelOP::ADD);
+    }
+
+    EventLoop::~EventLoop()
+    {
+        if (socketPair_[1] >= 0)
+        {
+            close(socketPair_[1]);
         }
     }
-}
 
-
-StatusCode EventLoop::run()
-{
-    isQuit_.store(false);//延迟启动非初始化时启动
-    if(std::this_thread::get_id() != threadID_)
+    // 本地写数据
+    void EventLoop::taskWakeup_()
     {
-        return StatusCode::kError;
+        char msg = 'w';
+        ssize_t n = write(socketPair_[1], &msg, sizeof(msg));
+        (void)n;
     }
 
-    while(!isQuit_)
+    // 本地读数据
+    void EventLoop::readLocalMessage_()
     {
-        if(dispatcher_->dispatch() == StatusCode::kError)
+        char buf[256];
+        while (true)
+        { // 避免信号堆积
+            ssize_t n = read(socketPair_[0], buf, sizeof(buf));
+            if (n <= 0)
+            {
+                break;
+            }
+        }
+    }
+
+    StatusCode EventLoop::run()
+    {
+        isQuit_.store(false); // 延迟启动非初始化时启动
+        if (std::this_thread::get_id() != threadID_)
         {
             return StatusCode::kError;
         }
-        processTaskQ();
-    }
 
-    return StatusCode::kOk;
-
-}
-
-
-StatusCode EventLoop::active(int fd,uint32_t event)
-{
-    if(fd < 0)
-    {
-        return StatusCode::kInvalid;
-    }
-
-    auto it= channelMap_.find(fd);
-    if(it == channelMap_.end() || !it->second)
-    {
-        return StatusCode::kNotFound;
-    }
-    auto* channel = it->second.get();
-
-    if(event & static_cast<uint32_t>(net::FDEvent::kErrorEvent))
-    {
-        return remove_(fd);
-    }
-
-    if(event & static_cast<uint32_t>(net::FDEvent::kReadEvent) && channel->haveReadCallback())
-    {
-        channel->readFunc();
-        // 读回调可能在同线程中投递并立即处理 DELETE。
-        // 重新检查 channel 是否存在，避免解引用悬空指针。
-        it = channelMap_.find(fd);
-        if(it == channelMap_.end() || !it->second)
+        while (!isQuit_)
         {
-            return StatusCode::kOk;
-        }
-        channel = it->second.get();
-    }
-
-    if(event & static_cast<uint32_t>(net::FDEvent::kWriteEvent) && channel->haveWriteCallback())
-    {
-        channel->writeFunc();
-    }
-
-    return StatusCode::kOk;
-}
-
-
-StatusCode EventLoop::addTask(std::unique_ptr<net::Channel> channel,ChannelOP type)
-{
-    {    
-        std::lock_guard<std::mutex> lk(mutex_);
-        taskQ_.push(ChannelElement{type,std::move(channel),-1});
-    }
-    // 细节处理:
-    // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
-    //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
-    //   2) 新增 fd 的操作由主线程发起。
-
-    const bool sameThread = (threadID_ == std::this_thread::get_id());
-    if(sameThread && type != ChannelOP::DELETE)
-    {
-        // 当前线程直接处理
-        processTaskQ();
-    }
-    else if(!sameThread)
-    {
-        // 跨线程需要唤醒
-        taskWakeup_(); 
-    }
-    return StatusCode::kOk;
-}
-
-
-StatusCode EventLoop::addTask(int fd,ChannelOP type)
-{
-    if(fd < 0)
-    {
-        return StatusCode::kInvalid;
-    }
-    if(type == ChannelOP::ADD)
-    {
-        return StatusCode::kInvalid;
-    }
-
-    {    
-        std::lock_guard<std::mutex> lk(mutex_);
-        taskQ_.push(ChannelElement{type,nullptr,fd});
-    }
-    // 细节处理:
-    // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
-    //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
-    //   2) 新增 fd 的操作由主线程发起。
-
-    const bool sameThread = (threadID_ == std::this_thread::get_id());
-    if(sameThread && type != ChannelOP::DELETE)
-    {
-        // 当前线程直接处理
-        processTaskQ();
-    }
-    else if(!sameThread)
-    {
-        // 跨线程需要唤醒
-        taskWakeup_(); 
-    }
-    return StatusCode::kOk;
-}
-
-
-StatusCode EventLoop::destroyTask(int fd)
-{
-    return addTask(fd, ChannelOP::DELETE);
-}
-
-StatusCode EventLoop::processTaskQ()
-{
-    std::queue<ChannelElement> localQ;
-    {
-        std::lock_guard<std::mutex> lk(mutex_);
-        std::swap(localQ, taskQ_);
-    }
-
-    while(!localQ.empty())
-    {
-        auto element = std::move(localQ.front());
-        localQ.pop();
-        if(element.type == ChannelOP::ADD)
-        {
-            add_(std::move(element.channel)); 
-        }
-        else if(element.type == ChannelOP::DELETE)
-        {
-            int fd = element.fd;
-            if(fd < 0 && element.channel)
+            if (dispatcher_->dispatch() == StatusCode::kError)
             {
-                fd = element.channel->getSocket();
+                return StatusCode::kError;
             }
-            remove_(fd); 
+            processTaskQ();
         }
-        else if(element.type == ChannelOP::MODIFY)
-        {
-            int fd = element.fd;
-            if(fd < 0 && element.channel)
-            {
-                fd = element.channel->getSocket();
-            }
-            modify_(fd);
-        }
+
+        return StatusCode::kOk;
     }
-    return StatusCode::kOk;
-}
 
-
-void EventLoop::shutdown()
-{
-    isQuit_.store(true);
-    taskWakeup_();
-}
-
-
-
-StatusCode EventLoop::add_(std::unique_ptr<net::Channel> channel)
-{
-    int fd = channel -> getSocket();
-    
-    if(channelMap_.find(fd) == channelMap_.end())
+    StatusCode EventLoop::active(int fd, uint32_t event)
     {
-        channelMap_.insert(std::make_pair(fd,std::move(channel)));
-        dispatcher_->setChannel(channelMap_[fd].get());
-        if(dispatcher_->add() != StatusCode::kOk)
+        if (fd < 0)
         {
-            channelMap_.erase(fd);
-            return StatusCode::kError;
+            return StatusCode::kInvalid;
+        }
+
+        auto it = channelMap_.find(fd);
+        if (it == channelMap_.end() || !it->second)
+        {
+            return StatusCode::kNotFound;
+        }
+        auto *channel = it->second.get();
+
+        if (event & static_cast<uint32_t>(net::FDEvent::kErrorEvent))
+        {
+            return remove_(fd);
+        }
+
+        if (event & static_cast<uint32_t>(net::FDEvent::kReadEvent) && channel->haveReadCallback())
+        {
+            channel->readFunc();
+            // 读回调可能在同线程中投递并立即处理 DELETE。
+            // 重新检查 channel 是否存在，避免解引用悬空指针。
+            it = channelMap_.find(fd);
+            if (it == channelMap_.end() || !it->second)
+            {
+                return StatusCode::kOk;
+            }
+            channel = it->second.get();
+        }
+
+        if (event & static_cast<uint32_t>(net::FDEvent::kWriteEvent) &&
+            channel->haveWriteCallback())
+        {
+            channel->writeFunc();
+        }
+
+        return StatusCode::kOk;
+    }
+
+    StatusCode EventLoop::addTask(std::unique_ptr<net::Channel> channel, ChannelOP type)
+    {
+        {
+            std::lock_guard<std::mutex> lk(mutex_);
+            taskQ_.push(ChannelElement{type, std::move(channel), -1});
+        }
+        // 细节处理:
+        // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
+        //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
+        //   2) 新增 fd 的操作由主线程发起。
+
+        const bool sameThread = (threadID_ == std::this_thread::get_id());
+        if (sameThread && type != ChannelOP::DELETE)
+        {
+            // 当前线程直接处理
+            processTaskQ();
+        }
+        else if (!sameThread)
+        {
+            // 跨线程需要唤醒
+            taskWakeup_();
         }
         return StatusCode::kOk;
     }
 
-    return StatusCode::kError;
-}
-
-
-StatusCode EventLoop::remove_(int fd)
-{
-    if(channelMap_.find(fd) == channelMap_.end())
+    StatusCode EventLoop::addTask(int fd, ChannelOP type)
     {
-        return StatusCode::kNotFound;
-    }
-    dispatcher_->setChannel(channelMap_[fd].get());
-    StatusCode ret = dispatcher_->remove();
-    if(ret == StatusCode::kOk)
-    {
-        channelMap_.erase(fd);
-    }
-    return ret;
-}
+        if (fd < 0)
+        {
+            return StatusCode::kInvalid;
+        }
+        if (type == ChannelOP::ADD)
+        {
+            return StatusCode::kInvalid;
+        }
 
+        {
+            std::lock_guard<std::mutex> lk(mutex_);
+            taskQ_.push(ChannelElement{type, nullptr, fd});
+        }
+        // 细节处理:
+        // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
+        //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
+        //   2) 新增 fd 的操作由主线程发起。
 
-StatusCode EventLoop::modify_(int fd)
-{
-    if(channelMap_.find(fd)==channelMap_.end())
-    {
-        return StatusCode::kNotFound;
+        const bool sameThread = (threadID_ == std::this_thread::get_id());
+        if (sameThread && type != ChannelOP::DELETE)
+        {
+            // 当前线程直接处理
+            processTaskQ();
+        }
+        else if (!sameThread)
+        {
+            // 跨线程需要唤醒
+            taskWakeup_();
+        }
+        return StatusCode::kOk;
     }
-    dispatcher_->setChannel(channelMap_[fd].get());
-    StatusCode ret = dispatcher_->modify();
-    return ret;
-}
-}
+
+    StatusCode EventLoop::destroyTask(int fd)
+    {
+        return addTask(fd, ChannelOP::DELETE);
+    }
+
+    StatusCode EventLoop::processTaskQ()
+    {
+        std::queue<ChannelElement> localQ;
+        {
+            std::lock_guard<std::mutex> lk(mutex_);
+            std::swap(localQ, taskQ_);
+        }
+
+        while (!localQ.empty())
+        {
+            auto element = std::move(localQ.front());
+            localQ.pop();
+            if (element.type == ChannelOP::ADD)
+            {
+                add_(std::move(element.channel));
+            }
+            else if (element.type == ChannelOP::DELETE)
+            {
+                int fd = element.fd;
+                if (fd < 0 && element.channel)
+                {
+                    fd = element.channel->getSocket();
+                }
+                remove_(fd);
+            }
+            else if (element.type == ChannelOP::MODIFY)
+            {
+                int fd = element.fd;
+                if (fd < 0 && element.channel)
+                {
+                    fd = element.channel->getSocket();
+                }
+                modify_(fd);
+            }
+        }
+        return StatusCode::kOk;
+    }
+
+    void EventLoop::shutdown()
+    {
+        isQuit_.store(true);
+        taskWakeup_();
+    }
+
+    StatusCode EventLoop::add_(std::unique_ptr<net::Channel> channel)
+    {
+        int fd = channel->getSocket();
+
+        if (channelMap_.find(fd) == channelMap_.end())
+        {
+            channelMap_.insert(std::make_pair(fd, std::move(channel)));
+            dispatcher_->setChannel(channelMap_[fd].get());
+            if (dispatcher_->add() != StatusCode::kOk)
+            {
+                channelMap_.erase(fd);
+                return StatusCode::kError;
+            }
+            return StatusCode::kOk;
+        }
+
+        return StatusCode::kError;
+    }
+
+    StatusCode EventLoop::remove_(int fd)
+    {
+        if (channelMap_.find(fd) == channelMap_.end())
+        {
+            return StatusCode::kNotFound;
+        }
+        dispatcher_->setChannel(channelMap_[fd].get());
+        StatusCode ret = dispatcher_->remove();
+        if (ret == StatusCode::kOk)
+        {
+            channelMap_.erase(fd);
+        }
+        return ret;
+    }
+
+    StatusCode EventLoop::modify_(int fd)
+    {
+        if (channelMap_.find(fd) == channelMap_.end())
+        {
+            return StatusCode::kNotFound;
+        }
+        dispatcher_->setChannel(channelMap_[fd].get());
+        StatusCode ret = dispatcher_->modify();
+        return ret;
+    }
+} // namespace reactor::core
 // namespace reactor::core

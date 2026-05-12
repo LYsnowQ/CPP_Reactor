@@ -15,7 +15,7 @@
 namespace reactor::core
 {
 
-    enum class ChannelOP:uint8_t
+    enum class ChannelOP : uint8_t
     {
         ADD,
         DELETE,
@@ -26,57 +26,57 @@ namespace reactor::core
 
     class EventLoop
     {
-    public:
-        
+      public:
         struct ChannelElement
         {
             ChannelOP type;
             std::unique_ptr<net::Channel> channel;
             int fd;
         };
-        
+
         EventLoop();
 
         EventLoop(std::string name, DispatcherType type = DispatcherType::kEpoll);
-        
-        ~EventLoop(); 
-        
+
+        ~EventLoop();
+
         StatusCode run();
 
-        StatusCode addTask(std::unique_ptr<net::Channel> channel ,ChannelOP type);
-        
-        StatusCode addTask(int fd,ChannelOP type);
+        StatusCode addTask(std::unique_ptr<net::Channel> channel, ChannelOP type);
 
-        StatusCode destroyTask(int fd);        
+        StatusCode addTask(int fd, ChannelOP type);
 
-        StatusCode active(int fd,uint32_t event);
-        
+        StatusCode destroyTask(int fd);
+
+        StatusCode active(int fd, uint32_t event);
+
         StatusCode processTaskQ();
 
         void shutdown();
-    private:   
+
+      private:
         void taskWakeup_();
         void readLocalMessage_();
 
         StatusCode add_(std::unique_ptr<net::Channel> channel);
         StatusCode remove_(int fd);
         StatusCode modify_(int fd);
-    private:
+
+      private:
         std::unique_ptr<Dispatcher> dispatcher_;
 
         // 任务队列
         std::queue<ChannelElement> taskQ_;
-       
-        std::string threadName_;    
+
+        std::string threadName_;
         std::thread::id threadID_;
-        
-        //映射与互斥锁:
-        std::map<int,std::unique_ptr<net::Channel>>channelMap_;
+
+        // 映射与互斥锁:
+        std::map<int, std::unique_ptr<net::Channel>> channelMap_;
         std::mutex mutex_;
         std::atomic<bool> isQuit_{true};
-      
+
         int socketPair_[2]; // 存储由 socketpair 初始化的本地通信 fd
     };
 
-
-} //namespace reactor::core
+} // namespace reactor::core

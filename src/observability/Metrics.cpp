@@ -2,7 +2,7 @@
 
 namespace reactor::observability
 {
-    Metrics& Metrics::instance()
+    Metrics &Metrics::instance()
     {
         static Metrics metrics;
         return metrics;
@@ -25,7 +25,7 @@ namespace reactor::observability
 
     void Metrics::onConnectionsClosed(uint64_t count)
     {
-        if(count == 0)
+        if (count == 0)
         {
             return;
         }
@@ -39,15 +39,15 @@ namespace reactor::observability
 
     void Metrics::onResponseStatus(int statusCode)
     {
-        if(statusCode >= 200 && statusCode < 300)
+        if (statusCode >= 200 && statusCode < 300)
         {
             responses2xx_.fetch_add(1, std::memory_order_relaxed);
         }
-        else if(statusCode >= 400 && statusCode < 500)
+        else if (statusCode >= 400 && statusCode < 500)
         {
             responses4xx_.fetch_add(1, std::memory_order_relaxed);
         }
-        else if(statusCode >= 500 && statusCode < 600)
+        else if (statusCode >= 500 && statusCode < 600)
         {
             responses5xx_.fetch_add(1, std::memory_order_relaxed);
         }
@@ -69,11 +69,9 @@ namespace reactor::observability
         requestLatencyTotalUs_.fetch_add(latencyUs, std::memory_order_relaxed);
 
         uint64_t currentMax = requestLatencyMaxUs_.load(std::memory_order_relaxed);
-        while(currentMax < latencyUs && !requestLatencyMaxUs_.compare_exchange_weak(
-                                      currentMax,
-                                      latencyUs,
-                                      std::memory_order_relaxed,
-                                      std::memory_order_relaxed))
+        while (currentMax < latencyUs &&
+               !requestLatencyMaxUs_.compare_exchange_weak(
+                   currentMax, latencyUs, std::memory_order_relaxed, std::memory_order_relaxed))
         {
         }
     }
@@ -95,4 +93,4 @@ namespace reactor::observability
         s.requestLatencyMaxUs = requestLatencyMaxUs_.load(std::memory_order_relaxed);
         return s;
     }
-} // 命名空间 reactor::observability
+} // namespace reactor::observability

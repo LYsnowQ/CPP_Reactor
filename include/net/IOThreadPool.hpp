@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -14,38 +13,40 @@
 #include <future>
 #include <functional>
 #include <condition_variable>
-#include <latch>//cpp20特性计数器，在非0时会阻塞
+#include <latch> //cpp20特性计数器，在非0时会阻塞
 
 #include "core/EventLoop.hpp"
 
-
-namespace reactor::net{
+namespace reactor::net
+{
     class IOThreadPool
     {
-    public:
+      public:
         using Task = std::function<void()>;
 
-        IOThreadPool(uint32_t maxThreads = 2, core::DispatcherType dispatcherType = core::DispatcherType::kEpoll);
+        IOThreadPool(uint32_t maxThreads = 2,
+                     core::DispatcherType dispatcherType = core::DispatcherType::kEpoll);
         ~IOThreadPool();
 
         void start();
         void stop();
 
-        core::EventLoop* getNextLoop();
-        //core::EventLoop* getLoop(uint32_t index);长连接暂时不实现
+        core::EventLoop *getNextLoop();
+        // core::EventLoop* getLoop(uint32_t index);长连接暂时不实现
 
-        //运行移动，但禁止拷贝
-        IOThreadPool(const IOThreadPool&) = delete;
-        IOThreadPool& operator= (const IOThreadPool&) = delete;
-        IOThreadPool(const IOThreadPool&&) = delete;
-    private:
+        // 运行移动，但禁止拷贝
+        IOThreadPool(const IOThreadPool &) = delete;
+        IOThreadPool &operator=(const IOThreadPool &) = delete;
+        IOThreadPool(const IOThreadPool &&) = delete;
+
+      private:
         void worker_(size_t index);
 
-    private:
-        std::vector<std::thread>threads_;
-        std::vector<std::unique_ptr<core::EventLoop>>loops_;
-        std::queue<Task>taskQ_;
-        
+      private:
+        std::vector<std::thread> threads_;
+        std::vector<std::unique_ptr<core::EventLoop>> loops_;
+        std::queue<Task> taskQ_;
+
         std::condition_variable cv_;
         std::mutex mutex_;
 
@@ -55,5 +56,5 @@ namespace reactor::net{
         const uint32_t maxThreads_;
         const core::DispatcherType dispatcherType_;
     };
-    
-}//namespace reactor::net
+
+} // namespace reactor::net

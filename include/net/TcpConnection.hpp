@@ -14,10 +14,11 @@
 #include "protocol/HttpRequest.hpp"
 #include "protocol/HttpResponse.hpp"
 
-namespace reactor::net{
+namespace reactor::net
+{
     class TcpConnection
     {
-    public:
+      public:
         struct HandlerResult
         {
             int statusCode = 200;
@@ -26,16 +27,16 @@ namespace reactor::net{
             std::string contentType = "text/plain; charset=utf-8";
             bool closeConnection = false;
         };
-        using RequestHandler = std::function<HandlerResult(protocol::HttpRequest&)>;
+        using RequestHandler = std::function<HandlerResult(protocol::HttpRequest &)>;
 
-        TcpConnection(const TcpConnection&)=delete;
-        TcpConnection& operator= (const TcpConnection&) = delete;
-        
-        static std::unique_ptr<TcpConnection> create(int fd,core::EventLoop* evLoop);
+        TcpConnection(const TcpConnection &) = delete;
+        TcpConnection &operator=(const TcpConnection &) = delete;
+
+        static std::unique_ptr<TcpConnection> create(int fd, core::EventLoop *evLoop);
 
         ~TcpConnection();
-        
-        //IO处理(Channel回调)        
+
+        // IO处理(Channel回调)
         void handleRead();
         void handleWrite();
         void handleClose();
@@ -46,33 +47,35 @@ namespace reactor::net{
         void setCloseCallback(std::function<void(int)> closeCb);
         bool shouldCloseForIdle(int64_t nowMs) const;
 
-        int fd()const;
-        const std::string& name() const;
+        int fd() const;
+        const std::string &name() const;
         bool isDisconnected() const;
 
-    private:
-        enum State {kConnecting, kConnected, kDisconnecting,kDisconnected};
-        
-        TcpConnection(int fd, reactor::core::EventLoop* evLoop, std::string name);
-        
+      private:
+        enum State
+        {
+            kConnecting,
+            kConnected,
+            kDisconnecting,
+            kDisconnected
+        };
+
+        TcpConnection(int fd, reactor::core::EventLoop *evLoop, std::string name);
+
         void destory_();
         void onChannelDestroyed_();
         bool isParseWaitTimeout_() const;
-        void appendSimpleResponse_(
-            int statusCode,
-            std::string_view reasonPhrase,
-            std::string_view body,
-            std::string_view contentType);
+        void appendSimpleResponse_(int statusCode, std::string_view reasonPhrase,
+                                   std::string_view body, std::string_view contentType);
         void queueSimpleResponse_(int statusCode, std::string_view reasonPhrase);
 
-    private:
+      private:
         int fd_;
         std::atomic<State> state_;
 
-        //非拥有
-        core::EventLoop* loop_;
-        net::Channel* channel_;
-
+        // 非拥有
+        core::EventLoop *loop_;
+        net::Channel *channel_;
 
         std::string name_;
         base::Buffer readBuffer_;
@@ -98,4 +101,4 @@ namespace reactor::net{
         RequestHandler requestHandler_;
         std::function<void(int)> closeCallback_;
     };
-}
+} // namespace reactor::net

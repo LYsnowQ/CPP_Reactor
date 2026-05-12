@@ -23,8 +23,8 @@ namespace reactor::observability
 
     class Metrics
     {
-    public:
-        static Metrics& instance();
+      public:
+        static Metrics &instance();
 
         void onAcceptOk();
         void onAcceptFail();
@@ -38,10 +38,10 @@ namespace reactor::observability
 
         MetricsSnapshot snapshot() const;
 
-    private:
+      private:
         Metrics() = default;
 
-    private:
+      private:
         std::atomic<uint64_t> acceptOk_{0};
         std::atomic<uint64_t> acceptFail_{0};
         std::atomic<uint64_t> activeConnections_{0};
@@ -55,4 +55,4 @@ namespace reactor::observability
         std::atomic<uint64_t> requestLatencyTotalUs_{0};
         std::atomic<uint64_t> requestLatencyMaxUs_{0};
     };
-} // 命名空间 reactor::observability
+} // namespace reactor::observability

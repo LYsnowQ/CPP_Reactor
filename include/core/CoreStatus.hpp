@@ -17,5 +17,4 @@ namespace reactor::core
     {
         return static_cast<int32_t>(code);
     }
-}
-
+} // namespace reactor::core

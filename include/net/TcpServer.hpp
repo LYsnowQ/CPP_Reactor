@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -14,25 +14,23 @@
 #include "net/IOThreadPool.hpp"
 #include "observability/Metrics.hpp"
 
-namespace reactor::net{
-    
+namespace reactor::net
+{
+
     // enum class TcpServerMode:uint16_t
     // {
     //     kMianThreadMode,
     //     kChiledThreadMode
     // };
 
-
     class TcpServer
     {
-    public:
+      public:
         using RequestHandler = TcpConnection::RequestHandler;
 
-        TcpServer(uint16_t port,
-                  uint32_t maxThread,
+        TcpServer(uint16_t port, uint32_t maxThread,
                   core::DispatcherType dispatcherType = core::DispatcherType::kEpoll,
-                  bool keepAliveEnabled = false,
-                  uint32_t keepAliveMaxRequests = 100,
+                  bool keepAliveEnabled = false, uint32_t keepAliveMaxRequests = 100,
                   uint32_t keepAliveIdleTimeoutMs = 10000);
         ~TcpServer();
 
@@ -42,16 +40,17 @@ namespace reactor::net{
 
         core::StatusCode stop();
         void setRequestHandler(RequestHandler handler);
-    private:
+
+      private:
         void cleanupClosedConnections_();
         void enqueueClosedConnection_(int fd);
         void logMetricsIfNeeded_();
 
-    private:
+      private:
         int lfd_;
         uint16_t port_;
         std::thread accepter_;
-        std::map<int,std::unique_ptr<TcpConnection>>conns_;
+        std::map<int, std::unique_ptr<TcpConnection>> conns_;
         std::mutex connsMutex_;
         std::vector<int> pendingCloseFds_;
         std::mutex pendingCloseMutex_;
@@ -66,4 +65,4 @@ namespace reactor::net{
         std::chrono::steady_clock::time_point lastMetricsLogTime_;
         reactor::observability::MetricsSnapshot lastMetricsSnapshot_;
     };
-}
+} // namespace reactor::net
