@@ -16,7 +16,7 @@
 
 namespace reactor::net
 {
-    class TcpConnection
+    class TcpConnection:public std::enable_shared_from_this<TcpConnection>
     {
       public:
         struct HandlerResult
@@ -26,13 +26,14 @@ namespace reactor::net
             std::string body;
             std::string contentType = "text/plain; charset=utf-8";
             bool closeConnection = false;
+            bool async = false;
         };
-        using RequestHandler = std::function<HandlerResult(protocol::HttpRequest &)>;
+        using RequestHandler = std::function<HandlerResult(protocol::HttpRequest &, TcpConnection &)>;
 
         TcpConnection(const TcpConnection &) = delete;
         TcpConnection &operator=(const TcpConnection &) = delete;
 
-        static std::unique_ptr<TcpConnection> create(int fd, core::EventLoop *evLoop);
+        static std::shared_ptr<TcpConnection> create(int fd, core::EventLoop *evLoop);
 
         ~TcpConnection();
 
@@ -46,6 +47,9 @@ namespace reactor::net
         void setRequestHandler(RequestHandler handler);
         void setCloseCallback(std::function<void(int)> closeCb);
         bool shouldCloseForIdle(int64_t nowMs) const;
+
+        core::EventLoop *getLoop() const;
+        void sendAsyncResponse(const HandlerResult & result);
 
         int fd() const;
         const std::string &name() const;
@@ -80,6 +84,8 @@ namespace reactor::net
         std::string name_;
         base::Buffer readBuffer_;
         base::Buffer writeBuffer_;
+
+        bool asyncPending_ = false;
 
         std::unique_ptr<protocol::HttpRequest> inFlightRequest_;
         std::unique_ptr<protocol::HttpRequest> request_;

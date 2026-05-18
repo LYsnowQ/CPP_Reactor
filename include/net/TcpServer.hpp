@@ -50,7 +50,7 @@ namespace reactor::net
         int lfd_;
         uint16_t port_;
         std::thread accepter_;
-        std::map<int, std::unique_ptr<TcpConnection>> conns_;
+        std::map<int, std::shared_ptr<TcpConnection>> conns_;
         std::mutex connsMutex_;
         std::vector<int> pendingCloseFds_;
         std::mutex pendingCloseMutex_;

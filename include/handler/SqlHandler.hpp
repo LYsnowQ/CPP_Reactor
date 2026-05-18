@@ -1,6 +1,15 @@
 #pragma once
 
+#include "net/TcpConnection.hpp"
+#include "persistence/SqlExecutor.hpp"
+#include <memory>
+
 namespace reactor::handler
 {
-    // TODO: SQL 请求处理器
-}
+    class SqlHandler
+    {
+    public:
+      static net::TcpConnection::RequestHandler createHandler(std::shared_ptr<persistence::SqlExecutor> sqlExecutor);  
+    };
+
+}//namespace reactor::handler

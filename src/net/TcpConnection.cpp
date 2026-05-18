@@ -58,9 +58,9 @@ namespace reactor::net
         }
     } // namespace
 
-    std::unique_ptr<TcpConnection> TcpConnection::create(int fd, core::EventLoop *loop)
+    std::shared_ptr<TcpConnection> TcpConnection::create(int fd, core::EventLoop *loop)
     {
-        auto conn = std::unique_ptr<TcpConnection>(
+        auto conn = std::shared_ptr<TcpConnection>(
             new TcpConnection(fd, loop, "Connection-" + std::to_string(fd)));
         return conn;
     }
@@ -221,7 +221,15 @@ namespace reactor::net
 
             if (requestHandler_)
             {
-                HandlerResult result = requestHandler_(*request_);
+                HandlerResult result = requestHandler_(*request_,*this);
+                    
+                if(result.async)
+                {
+                    asyncPending_=true;//异步执行标记，直接返回
+                    return;
+                }
+                
+                //以下为同步机制
                 if (result.statusCode >= 100 && result.statusCode <= 599)
                 {
                     pendingStatusCode_ = result.statusCode;
@@ -372,6 +380,47 @@ namespace reactor::net
         }
     }
 
+    core::EventLoop* TcpConnection::getLoop() const
+    {
+        return loop_;
+    }
+
+    void TcpConnection::sendAsyncResponse(const HandlerResult &result)
+    {
+        if(state_.load() != kConnected)
+        {
+            return;
+        }
+
+        if(result.statusCode >=100 && result.statusCode<=599)
+        {
+            pendingStatusCode_ = result.statusCode;
+        }
+
+        if(!result.reasonPhrase.empty())
+        {
+            pendingReasonPhrase_ = std::move(result.reasonPhrase);
+        }
+        
+        pendingBody_ = std::move(result.body);
+        
+        if(!result.contentType.empty())
+        {
+            pendingContentType_ = std::move(result.contentType);
+        }
+
+        asyncPending_ = false;
+
+        if(channel_)
+        {
+            channel_->writeEventEnable(true);
+            loop_->addTask(channel_->getSocket(),core::ChannelOP::MODIFY);
+        }
+    }
+
+
+} // namespace reactor::net
+
 #if 0
 struct TcpConnection* tcpConnectionInit(int fd,struct EventLoop* evLoop)
 {   
@@ -478,5 +527,3 @@ int tcpConnectionDestory(void* arg)
     return 0;
 }
 #endif
-} // namespace reactor::net
-// namespace reactor::net

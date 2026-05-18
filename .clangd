@@ -1,5 +1,10 @@
 CompileFlags:
-  CompilationDatabase: build/conan/build/Release
+  Add:
+    - -std=c++20
+    - -I/project/CPPReactor/include
+    - -I/project/CPPReactor/third_party
+    - -I/home/ghl/.conan2/p/nlohm0567ffc90cfc1/p/include
+    - -I/usr/include/mysql-cppconn
 Diagnostics:
   UnusedIncludes: Strict  
 Index:

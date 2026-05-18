@@ -1,4 +1,6 @@
 #include "handler/StaticFileHandler.hpp"
+#include "net/TcpConnection.hpp"
+#include "utils/StringUtils.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -8,79 +10,6 @@
 
 namespace
 {
-    std::string toHex_(unsigned char c)
-    {
-        constexpr char kHex[] = "0123456789ABCDEF";
-        std::string out;
-        out.push_back(kHex[(c >> 4) & 0x0F]);
-        out.push_back(kHex[c & 0x0F]);
-        return out;
-    }
-
-    std::string urlEncodePathComponent_(std::string_view in)
-    {
-        std::string out;
-        for (unsigned char c : in)
-        {
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-                c == '-' || c == '_' || c == '.' || c == '~')
-            {
-                out.push_back(static_cast<char>(c));
-            }
-            else
-            {
-                out.push_back('%');
-                out += toHex_(c);
-            }
-        }
-        return out;
-    }
-
-    int hexValue_(char c)
-    {
-        if (c >= '0' && c <= '9')
-        {
-            return c - '0';
-        }
-        if (c >= 'a' && c <= 'f')
-        {
-            return c - 'a' + 10;
-        }
-        if (c >= 'A' && c <= 'F')
-        {
-            return c - 'A' + 10;
-        }
-        return -1;
-    }
-
-    std::string urlDecode_(std::string_view in)
-    {
-        std::string out;
-        out.reserve(in.size());
-        for (size_t i = 0; i < in.size(); ++i)
-        {
-            const char c = in[i];
-            if (c == '%' && i + 2 < in.size())
-            {
-                const int hi = hexValue_(in[i + 1]);
-                const int lo = hexValue_(in[i + 2]);
-                if (hi >= 0 && lo >= 0)
-                {
-                    out.push_back(static_cast<char>((hi << 4) | lo));
-                    i += 2;
-                    continue;
-                }
-            }
-            if (c == '+')
-            {
-                out.push_back(' ');
-                continue;
-            }
-            out.push_back(c);
-        }
-        return out;
-    }
-
     std::string htmlEscape_(std::string_view in)
     {
         std::string out;
@@ -243,7 +172,7 @@ namespace
                 {
                     encoded += "/";
                 }
-                encoded += urlEncodePathComponent_(seg);
+                encoded += reactor::utils::urlEncodePathComponent(seg);
             }
             std::string href = "/" + encoded;
             if (entry.is_directory())
@@ -268,7 +197,9 @@ reactor::handler::StaticFileHandler::createHandler(const std::filesystem::path &
     const auto staticRoot = std::filesystem::weakly_canonical(root);
     return
         [staticRoot](
-            reactor::net::protocol::HttpRequest &req) -> reactor::net::TcpConnection::HandlerResult
+            reactor::net::protocol::HttpRequest &req,
+            reactor::net::TcpConnection &conn) 
+        -> reactor::net::TcpConnection::HandlerResult
     {
         reactor::net::TcpConnection::HandlerResult result;
         const auto method = req.getMethed();
@@ -289,7 +220,7 @@ reactor::handler::StaticFileHandler::createHandler(const std::filesystem::path &
             return result;
         }
 
-        const auto decodedPath = urlDecode_(urlPath);
+        const auto decodedPath = reactor::utils::urlDecode(urlPath);
         auto relative = std::filesystem::path(decodedPath).relative_path();
         auto candidate = std::filesystem::weakly_canonical(staticRoot / relative);
         if (!isWithinRoot_(staticRoot, candidate))

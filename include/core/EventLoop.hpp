@@ -9,6 +9,8 @@
 #include <map>
 #include <mutex>
 #include <atomic>
+#include <functional>
+#include "core/CoreStatus.hpp"
 #include "net/Channel.hpp"
 #include "core/Dispatcher.hpp"
 
@@ -34,6 +36,8 @@ namespace reactor::core
             int fd;
         };
 
+        using Callback = std::function<void()>;
+
         EventLoop();
 
         EventLoop(std::string name, DispatcherType type = DispatcherType::kEpoll);
@@ -51,6 +55,8 @@ namespace reactor::core
         StatusCode active(int fd, uint32_t event);
 
         StatusCode processTaskQ();
+
+        void post(Callback cb);
 
         void shutdown();
 
@@ -77,6 +83,7 @@ namespace reactor::core
         std::atomic<bool> isQuit_{true};
 
         int socketPair_[2]; // 存储由 socketpair 初始化的本地通信 fd
+        std::queue<Callback> callbackQueue_;//SQL回调队列
     };
 
 } // namespace reactor::core

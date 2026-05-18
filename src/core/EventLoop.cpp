@@ -249,8 +249,39 @@ namespace reactor::core
                 modify_(fd);
             }
         }
+
+        //处理回调队列
+        {
+            std::queue<Callback> localCbs;
+            {
+                std::lock_guard<std::mutex> lk(mutex_);
+                localCbs.swap(callbackQueue_);
+            }
+            while(!localCbs.empty())
+            {
+                auto cb = std::move(localCbs.front());
+                localCbs.pop();
+                cb();
+            }
+        }
         return StatusCode::kOk;
     }
+
+
+    void EventLoop::post(Callback cb)
+    {
+        bool needWakeup = false;
+        {
+            std::lock_guard<std::mutex> lk(mutex_);
+            callbackQueue_.push(std::move(cb));
+            needWakeup = (threadID_ != std::this_thread::get_id());
+        }
+        if(needWakeup)
+        {
+            taskWakeup_();
+        }
+    }
+
 
     void EventLoop::shutdown()
     {
