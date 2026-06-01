@@ -23,7 +23,23 @@ tests/bench_reports/*
 tests/benchmarks/*
 !tests/bench_reports/.gitkeep
 !tests/benchmarks/.gitkeep
-!tests/BENCHMARK_REFERENCE_COMPARISON_20260425.md
+!tests/BENCHMARK_REPORT.md
+
+# Python virtual environment
+tests/.venv/
+.venv/
+
+# Python cache and build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Python IDE
+.python-version
 
 # Local temp files
 *.swp

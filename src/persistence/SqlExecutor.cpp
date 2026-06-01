@@ -1,7 +1,8 @@
 #include "persistence/SqlExecutor.hpp"
 #include "persistence/ThreadLocalSqlConn.hpp"
 #include <mutex>
-#include <mysqlx/devapi/common.h>
+#include "spdlog/spdlog.h"
+
 
 namespace reactor::persistence
 {
@@ -78,8 +79,10 @@ namespace reactor::persistence
             {
                 job(tls_);
             }
-            catch(const mysqlx::Error& err)
-            {}
+            catch(const std::exception& err)
+            {
+                spdlog::warn("SqlExecutor job failed: {}",err.what());
+            }
         }
         tls_.cleanupCurrentThread();
     }

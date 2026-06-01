@@ -3,8 +3,10 @@
 数据注入脚本：向 MySQL 插入 50,000 条测试数据。
 
 用法：
-    python3 scripts/seed_data.py                      # 使用 config/SQLConfig.json 配置
-    python3 scripts/seed_data.py --host 127.0.0.1 --port 3306 --user root --password xxx --database test
+    bash tests/setup.sh                                    # 首次：创建虚拟环境
+    source tests/.venv/bin/activate                        # 激活虚拟环境
+    python3 tests/seed_data.py                             # 运行
+    python3 tests/seed_data.py --host 127.0.0.1 --port 3306 --user root --password xxx --database test
 
 表结构：
     CREATE TABLE users (
@@ -25,7 +27,9 @@ from pathlib import Path
 try:
     import pymysql
 except ImportError:
-    print("请先安装 pymysql: pip3 install pymysql")
+    print("请先创建并激活虚拟环境:")
+    print("  bash tests/setup.sh")
+    print("  source tests/.venv/bin/activate")
     sys.exit(1)
 
 
@@ -91,7 +95,6 @@ def generate_batch(start_id, count):
 def seed_data(conn, total_rows, batch_size):
     cursor = conn.cursor()
 
-    # 清空旧数据（可选——先统计一下）
     cursor.execute("SELECT COUNT(*) FROM users")
     existing = cursor.fetchone()[0]
     if existing > 0:

@@ -6,7 +6,7 @@ INCLUDE_DIRS := $(shell find include -type d)
 CONAN_NLOHMANN := $(shell find /home/ghl/.conan2 -path "*/include/nlohmann/json.hpp" 2>/dev/null | head -1 | xargs dirname | xargs dirname 2>/dev/null)
 CPPFLAGS := $(addprefix -I,$(INCLUDE_DIRS)) -I./third_party -I/usr/include/mysql-cppconn $(if $(CONAN_NLOHMANN),-I$(CONAN_NLOHMANN),)
 LDFLAGS :=
-LDLIBS := -pthread -lmysqlcppconnx
+LDLIBS := -pthread -lmysqlcppconn
 
 SRC_DIR := src
 BUILD_DIR := build

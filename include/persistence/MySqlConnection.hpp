@@ -4,7 +4,11 @@
 #include "persistence/SqlConfig.hpp"
 #include "persistence/SqlTypes.hpp"
 
-#include "mysqlx/xdevapi.h"
+#include <jdbc/mysql_driver.h>
+#include <jdbc/mysql_connection.h>
+#include <jdbc/cppconn/statement.h>
+#include <jdbc/cppconn/prepared_statement.h>
+#include <jdbc/cppconn/resultset.h>
 
 #include <string_view>
 #include <memory>
@@ -29,7 +33,8 @@ namespace reactor::persistence
         Result<void> rollback() override;
     private:
         SqlConfig cfg_;
-        std::unique_ptr<mysqlx::Session> Session_;
+        sql::Driver* driver_{nullptr};
+        std::unique_ptr<sql::Connection> conn_;
     };
 
 }//namespace reactor::persistence

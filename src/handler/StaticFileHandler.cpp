@@ -198,7 +198,7 @@ reactor::handler::StaticFileHandler::createHandler(const std::filesystem::path &
     return
         [staticRoot](
             reactor::net::protocol::HttpRequest &req,
-            reactor::net::TcpConnection &conn) 
+            reactor::net::TcpConnection &) 
         -> reactor::net::TcpConnection::HandlerResult
     {
         reactor::net::TcpConnection::HandlerResult result;
