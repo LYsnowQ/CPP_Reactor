@@ -9,6 +9,12 @@
 
 namespace reactor::base
 {
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // buffer_ 初始大小为 kCheapPrepend + kInitialSize（8 + 1024 = 1032）。
+    // readIndex_ = writeIndex_ = kCheapPrepend，即初始可读字节为 0。
     Buffer::Buffer()
         : buffer_(kCheapPrepend + kInitialSize), readIndex_(kCheapPrepend),
           writeIndex_(kCheapPrepend)
@@ -120,6 +126,16 @@ namespace reactor::base
         return retrieveAsString(readableBytes());
     }
 
+    // ====================================================================
+    // IO 读取（readv 双缓冲区）
+    // ====================================================================
+    //
+    // 使用 writeable 区 + 32KB 额外栈缓冲区作为 iovec：
+    //   1. 若 writeable 区 < 32KB，使用 2 个 iovec 元素
+    //   2. 否则仅用 1 个 iovec 元素（栈缓冲区不用）
+    // 读入数据 ≤ writeable 空间时直接写入 buffer，
+    // 超出部分从 extraBuf append 到缓冲区尾部。
+    // 这种设计避免了在每次读取时预判数据大小和频繁 resize。
     ssize_t Buffer::readFd(int fd, int *saved_errno)
     {
         char extraBuf[1024 * 32]; // 32K额外缓冲区
@@ -183,6 +199,13 @@ namespace reactor::base
         }
     }
 
+    // ====================================================================
+    // 扩容策略
+    // ====================================================================
+    //
+    // 先尝试整理碎片：将可读数据前挪到 kCheapPrepend 位置。
+    // 只有 prependable + writeable 总空间仍不足时才 resize。
+    // 这减少了内存重新分配和数据拷贝。
     void Buffer::makeSpace_(size_t len)
     {
         if (prependableBytes() + writeableBytes() < len + kCheapPrepend)

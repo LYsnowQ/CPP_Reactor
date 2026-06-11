@@ -43,13 +43,3 @@ namespace reactor::net::protocol
     };
 } // namespace reactor::net::protocol
 
-#if 0
-struct HttpResponse* httpResponseInit();
-
-void httpResponseDestory(struct HttpResponse* response);
-
-void HttpResponseAddHeader(struct HttpResponse* response,const char* key,const char* value);
-
-void httpResponsePrepareMsg(struct HttpResponse* response, struct Buffer* sendBuffer, int socket);
-
-#endif

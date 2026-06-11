@@ -35,6 +35,13 @@ namespace reactor::net
             return out;
         }
 
+        // ====================================================================
+        // Keep-Alive 判断逻辑
+        // ====================================================================
+        //
+        // HTTP/1.1 默认保持连接，除非 Connection: close。
+        // HTTP/1.0 默认关闭连接，除非 Connection: keep-alive。
+        // 大小写不敏感比较。
         bool shouldKeepAlive_(protocol::HttpRequest &req)
         {
             const auto versionLower = toLowerCopy_(req.version());
@@ -58,6 +65,12 @@ namespace reactor::net
         }
     } // namespace
 
+    // ====================================================================
+    // 工厂方法
+    // ====================================================================
+    //
+    // 构造函数为私有，通过 create 静态方法构造 shared_ptr，
+    // 使 TcpConnection 支持 shared_from_this，用于异步回写场景。
     std::shared_ptr<TcpConnection> TcpConnection::create(int fd, core::EventLoop *loop)
     {
         auto conn = std::shared_ptr<TcpConnection>(
@@ -65,6 +78,12 @@ namespace reactor::net
         return conn;
     }
 
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // 初始状态为 kConnecting，init() 成功后转为 kConnected。
+    // lastActivityMs_ 在构造时记录当前时间，使空闲超时从连接建立开始计算。
     TcpConnection::TcpConnection(int fd, core::EventLoop *loop, std::string name)
         : fd_(fd), state_(kConnecting), loop_(loop), channel_(nullptr), name_(std::move(name)),
           parseWaitStart_(std::chrono::steady_clock::now()),
@@ -94,6 +113,12 @@ namespace reactor::net
         state_ = kDisconnected;
     }
 
+    // ====================================================================
+    // Channel 注册
+    // ====================================================================
+    //
+    // 创建 Channel 时绑定自身成员函数（handleRead/handleWrite/closeCallback）。
+    // 初始仅监听读事件，写事件在需要发送响应时动态添加。
     bool TcpConnection::init()
     {
         auto ch = std::make_unique<net::Channel>(
@@ -153,6 +178,13 @@ namespace reactor::net
         return state_.load() == kDisconnected;
     }
 
+    // ====================================================================
+    // Channel 销毁回调
+    // ====================================================================
+    //
+    // 在 Channel 析构时由 EventLoop::remove_ 触发。
+    // 清空 channel_ 指针，状态置为 kDisconnected，调用 closeCallback_
+    // 通知 TcpServer 从连接容器中移除。
     void TcpConnection::onChannelDestroyed_()
     {
         channel_ = nullptr;
@@ -163,6 +195,18 @@ namespace reactor::net
         }
     }
 
+    // ====================================================================
+    // 读事件处理（HTTP 请求解析主入口）
+    // ====================================================================
+    //
+    // 1. 从 socket 读取数据到 readBuffer_。
+    // 2. 增量解析 HTTP 请求（支持一个 TCP 包分多次到达）。
+    // 3. 解析未完成（kAgain）：首次等待时记录 parseWaitStart_ 用于超时检测。
+    //    若等待超过 5 秒，直接回 408 并断开。
+    // 4. 解析失败（400/413）：清空 inFlightRequest_，标记不 Keep-Alive，回错误响应。
+    // 5. 解析成功：记录指标，判断是否需要 Keep-Alive，调用 requestHandler_。
+    //    若 handler 返回 async=true，跳过同步写路径，等待 sendAsyncResponse。
+    //    否则将结果暂存到 pending 变量，启用写事件。
     void TcpConnection::handleRead()
     {
         int savedErr = 0;
@@ -191,7 +235,7 @@ namespace reactor::net
                 {
                     queueSimpleResponse_(408, "Request Timeout");
                 }
-                // 请求尚未收全，继续等下一批数据/超时后由写事件回包
+                // 请求尚未收全，继续等下一批数据/超时后由写事件回包。
                 return;
             }
             parseWaiting_ = false;
@@ -223,13 +267,15 @@ namespace reactor::net
             {
                 HandlerResult result = requestHandler_(*request_,*this);
                     
+                // 异步执行标记，直接返回。
+                // 响应结果将通过 sendAsyncResponse 在后台线程回写。
                 if(result.async)
                 {
-                    asyncPending_=true;//异步执行标记，直接返回
+                    asyncPending_=true;
                     return;
                 }
                 
-                //以下为同步机制
+                // 同步机制：将 handler 返回的结果暂存到 pending 变量。
                 if (result.statusCode >= 100 && result.statusCode <= 599)
                 {
                     pendingStatusCode_ = result.statusCode;
@@ -271,6 +317,17 @@ namespace reactor::net
         return std::chrono::steady_clock::now() - parseWaitStart_ >= kParseWaitTimeout;
     }
 
+    // ====================================================================
+    // HTTP 响应组包
+    // ====================================================================
+    //
+    // 同步组装 HTTP/1.1 响应，包含：
+    //   状态行：HTTP/1.1 <statusCode> <reasonPhrase>
+    //   响应头：Content-Type、Content-Length、Connection、Server
+    //   空行 + 响应体
+    // 写入 writeBuffer_，由后续 handleWrite 统一发送。
+    //
+    // 同时对本次请求记录响应状态码和时延指标。
     void TcpConnection::appendSimpleResponse_(int statusCode, std::string_view reasonPhrase,
                                               std::string_view body, std::string_view contentType)
     {
@@ -316,6 +373,18 @@ namespace reactor::net
         loop_->addTask(channel_->getSocket(), core::ChannelOP::MODIFY);
     }
 
+    // ====================================================================
+    // 写事件处理（HTTP 响应发送主入口）
+    // ====================================================================
+    //
+    // 1. 若 writeBuffer_ 为空（首次写入），调用 appendSimpleResponse_
+    //    组装 HTTP 响应行 + 头 + 体到 writeBuffer_。
+    // 2. writeFd 将 buffer 内容写入 socket。
+    // 3. 发送完毕后：
+    //      - Keep-Alive 模式：重置 pending 变量 + 禁用写事件 + 等待下一请求。
+    //        servedRequests_ 递增，达到上限时关闭。
+    //      - 非 Keep-Alive：handleClose。
+    // 4. writeFd 返回错误（非 EAGAIN）时直接关闭连接。
     void TcpConnection::handleWrite()
     {
         if (writeBuffer_.readableBytes() == 0)
@@ -362,8 +431,15 @@ namespace reactor::net
         }
     }
 
+    // ====================================================================
+    // 连接关闭
+    // ====================================================================
+    //
+    // 幂等设计：先检查当前状态，已关闭或关闭中时直接返回。
+    // 投递 DELETE 任务到 EventLoop 移除 Channel，由 onChannelDestroyed_ 完成最终清理。
     void TcpConnection::handleClose()
     {
+        // 幂等关闭：防止 handleClose 被重复调用时重复投递 DELETE。
         const auto cur = state_.load();
         if (cur == kDisconnected || cur == kDisconnecting)
         {
@@ -385,8 +461,16 @@ namespace reactor::net
         return loop_;
     }
 
+    // ====================================================================
+    // 异步响应回写
+    // ====================================================================
+    //
+    // 由异步处理器（如 SqlHandler）跨线程调用。
+    // 先检查 state_ 确保连接仍存活（已断开则不操作）。
+    // 更新 pending 变量 → 启用写事件 → 通知 EventLoop 触发 handleWrite。
     void TcpConnection::sendAsyncResponse(const HandlerResult &result)
     {
+        // 连接已断开（如客户端提前关闭），放弃回写。
         if(state_.load() != kConnected)
         {
             return;
@@ -418,112 +502,4 @@ namespace reactor::net
         }
     }
 
-
-} // namespace reactor::net
-
-#if 0
-struct TcpConnection* tcpConnectionInit(int fd,struct EventLoop* evLoop)
-{   
-    struct TcpConnection* conn = (struct TcpConnection*)malloc(sizeof(struct TcpConnection));
-    conn->evLoop = evLoop;
-    conn->readBuffer = bufferInit(10240);
-    conn->writeBuffer = bufferInit(10240);
-    
-    // HTTP 协议对象
-    conn->request = httpRequestInit();
-    conn->response = httpResponseInit();
-    sprintf(conn->name,"Connection-%d",fd);
-    conn->channel = channelInit(fd ,ReadEvent, processRead, processWrite, tcpConnectionDestory,conn);
-    eventLoopAddTask(evLoop, conn->channel, ADD);
-
-    spdlog::debug(
-            "和客户端建立连接,threadName: {}, threadID: {},connName: {}",
-            evLoop->threadName,evLoop->threadID,conn->name);
-
-    if(!conn->readBuffer || 
-        !conn->writeBuffer ||
-        !conn->channel ||
-        !conn->evLoop)
-    {
-        free(conn);
-        perror("TcpConnection");
-        return NULL;
-    }
-
-    return conn;
 }
-int processWrite(void* arg)
-{
-    spdlog::debug("开始发送数据（基于事件）....");
-    struct TcpConnection* conn = (struct TcpConnection*)arg;
-
-    int count = bufferSendData(conn->writeBuffer, conn->channel->fd);
-    if(count > 0)
-    {
-        if(bufferReadableSize(conn->writeBuffer) == 0)
-        {
-            //writeEventEnable(conn->channel, false);
-
-            //eventLoopAddTask(conn->evLoop, conn->channel, MODIFY);
-
-            eventLoopAddTask(conn->evLoop, conn->channel, DELETE);
-        }
-    }
-
-    return 0;
-}
-
-int processRead(void* arg)
-{
-    struct TcpConnection* conn = (struct TcpConnection*)arg;
-    int count = bufferSocketRead(conn->readBuffer, conn->channel->fd); 
-    
-    spdlog::debug("接收到http请求，解析http请求：{}",conn->readBuffer->data+conn->readBuffer->readPos);
-
-    if(count > 0)
-    {
-        //接收 HTTP 请求，解析 HTTP 请求
-        int socket = conn->channel->fd;
-#ifdef MSG_SEND_AUTO                
-        writeEventEnable(conn->channel,true);
-        eventLoopAddTask(conn->evLoop, conn->channel, MODIFY);
-#endif
-        bool flag = parseHttpRequest(conn->request, conn->readBuffer, conn->response, conn->writeBuffer,socket);
-        if(!flag)
-        {
-            //解析失败
-            char* errMsg = " Http/1.1 400 Bad Request\r\n\r\n";
-            bufferAppendString(conn->writeBuffer, errMsg);
-        }
-    }
-#ifndef MSG_SEND_AUTO
-    //断开连接
-    eventLoopAddTask(conn->evLoop, conn->channel ,DELETE);
-#endif
-    return 0;
-}
-
-
-int tcpConnectionDestory(void* arg)
-{
-    struct TcpConnection* conn = (struct TcpConnection*)arg;
-    if(conn == NULL)
-    {
-        return 0;
-    } 
-    char name[32] = {0};
-    strncpy(name, conn->name, sizeof(name) - 1);
-    if(conn->readBuffer && bufferReadableSize(conn->readBuffer) == 0 &&
-        conn->writeBuffer && bufferReadableSize(conn->writeBuffer) == 0)
-    {
-        destoryChannel(conn->evLoop, conn->channel);
-        bufferDestory(conn->readBuffer);
-        bufferDestory(conn->writeBuffer);
-        httpRequestDestory(conn->request);
-        httpResponseDestory(conn->response);
-        free(conn);
-    }
-    spdlog::debug("连接断开，释放资源，connName:{}",name);
-    return 0;
-}
-#endif

@@ -45,3 +45,6 @@ build/
 *.swp
 *.swo
 *~
+
+# Design specification docs (not iteration logs)
+docs/spec/

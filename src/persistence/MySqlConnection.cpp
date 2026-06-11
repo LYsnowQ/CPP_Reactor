@@ -21,7 +21,18 @@ namespace reactor::persistence {
 
     namespace
     {
-        void bindArgs(sql::PreparedStatement& stmt,const std::vector<SqlValue>& args)
+        // ====================================================================
+        // bindArgs — PreparedStatement 参数绑定
+        // ====================================================================
+        //
+        // 通过 std::visit 按 variant 类型分发到对应的 setXxx 方法：
+        //   nullptr_t → setNull
+        //   int64_t   → setInt64
+        //   uint64_t  → setUInt64
+        //   float     → setDouble（隐式转换）
+        //   double    → setDouble
+        //   string    → setString
+        void bindArgs(sql::PreparedStatement& stmt, const std::vector<SqlValue>& args)
         {
             for(size_t i = 0;i < args.size(); ++i)
             {
@@ -57,6 +68,16 @@ namespace reactor::persistence {
             }
         }
 
+        // ====================================================================
+        // rowToSqlRow — JDBC ResultSet → SqlRow 转换
+        // ====================================================================
+        //
+        // 通过 ResultSetMetaData::getColumnType 判断列类型并转换为 SqlValue variant：
+        //   整数类（INTEGER/SMALLINT/TINYINT/BIGINT） → int64_t
+        //   BIT → uint64_t
+        //   浮点类（REAL/DOUBLE/DECIMAL） → double
+        //   文本/日期类（VARCHAR/CHAR/DATE/TIMESTAMP/TIME） → string
+        //   其他 → 判空后 fallback 到 string
         SqlRow rowToSqlRow(sql::ResultSet& rs, int colCount)
         {
             SqlRow row;
@@ -97,20 +118,30 @@ namespace reactor::persistence {
         }
     }//namespace
 
-
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // 仅保存配置和获取 driver 实例，不建立网络连接。
+    // driver_ 通过 sql::mysql::get_driver_instance() 获取（线程安全单例）。
     MySqlConnection::MySqlConnection(const SqlConfig& cfg)
     :cfg_(cfg)
     {
         driver_ = sql::mysql::get_driver_instance();
     }
 
-
     MySqlConnection::~MySqlConnection()
     {
         close();
     }
 
-
+    // ====================================================================
+    // 建立连接
+    // ====================================================================
+    //
+    // 使用 ConnectOptionsMap（键值对映射）而非 URL 字符串传参。
+    // 支持 OPT_RECONNECT、三组超时、字符集等全部连接参数。
+    // 连接成功后设 setAutoCommit(true)。
     Result<void> MySqlConnection::connect()
     {
         Result<void> res{};
@@ -146,21 +177,6 @@ namespace reactor::persistence {
             }
             conn_.reset(rawConn);
 
-            /*
-            std::ostringstream url;
-            url << "tcp://" << cfg_.host << ":" << cfg_.port;
-            std::string urlStr = url.str();
-
-            sql::SQLString connectTimeout(std::to_string(cfg_.connectTimeoutMs/1000)); 
-            sql::SQLString readTimeoutMs(std::to_string(cfg_.readTimeoutMs/1000));
-
-            conn_.reset(driver_->connect(urlStr, cfg_.user,cfg_.password));
-            if(!cfg_.database.empty())
-            {
-                conn_->setSchema(cfg_.database);
-            }
-            */
-
             conn_->setAutoCommit(true);
             res.ok = true;
         }
@@ -173,6 +189,11 @@ namespace reactor::persistence {
         return res;
     }
 
+    // ====================================================================
+    // 连接存活检测
+    // ====================================================================
+    //
+    // 执行 "DO 1"（MySQL 特有语法，不返回结果，仅验证连接可用）。
     Result<void> MySqlConnection::ping()
     {
         Result<void> res;
@@ -197,8 +218,13 @@ namespace reactor::persistence {
         return res;
     }
 
-
-    Result<SqlRows> MySqlConnection::query(std::string_view sql,const std::vector<SqlValue>& args)
+    // ====================================================================
+    // SQL 执行（双路径：Statement / PreparedStatement）
+    // ====================================================================
+    //
+    // args 为空时使用 Statement（避免 PreparedStatement 的额外开销）。
+    // args 非空时使用 PreparedStatement + bindArgs 类型安全绑定。
+    Result<SqlRows> MySqlConnection::query(std::string_view sql, const std::vector<SqlValue>& args)
     {
         Result<SqlRows> res;
         try
@@ -211,6 +237,7 @@ namespace reactor::persistence {
                 return res;
             }
 
+            // 无参数时使用 Statement（轻量级，避免 PreparedStatement 的额外开销）。
             if(args.empty())
             {
                 std::unique_ptr<sql::Statement> stmt(conn_->createStatement());
@@ -234,6 +261,8 @@ namespace reactor::persistence {
             }
             else
             {
+                // 有参数时使用 PreparedStatement。
+                // bindArgs 通过 std::visit 类型安全分发。
                 std::unique_ptr<sql::PreparedStatement> pstmt(conn_->prepareStatement(std::string(sql)));
                 if(!pstmt)
                 {
@@ -266,8 +295,13 @@ namespace reactor::persistence {
     return res;
     }
 
-
-    Result<uint64_t> MySqlConnection::execute(std::string_view sql,const std::vector<SqlValue>& args)
+    // ====================================================================
+    // execute — SQL 更新执行
+    // ====================================================================
+    //
+    // 与 query 相同双路径策略，调用 execute 而非 executeQuery。
+    // 返回值通过 getUpdateCount 获取受影响行数。
+    Result<uint64_t> MySqlConnection::execute(std::string_view sql, const std::vector<SqlValue>& args)
     {
         Result<uint64_t> res;
         try
@@ -319,7 +353,12 @@ namespace reactor::persistence {
         return res;
     }
 
-
+    // ====================================================================
+    // 关闭连接
+    // ====================================================================
+    //
+    // noexcept 保证：即使 close() 内部抛出异常也不传播。
+    // 所有异常被 catch(...) 吞噬，因为关闭阶段的异常不应影响上层逻辑。
     void MySqlConnection::close() noexcept
     {
         try
@@ -333,6 +372,13 @@ namespace reactor::persistence {
         catch(...)
         {}
     }
+
+    // ====================================================================
+    // 事务管理
+    // ====================================================================
+    //
+    // setAutoCommit(false) 开启事务。
+    // commit/rollback 后恢复 setAutoCommit(true)。
 
     Result<void> MySqlConnection::begin()
     {
@@ -357,9 +403,7 @@ namespace reactor::persistence {
             res.err.message = err.what();
         }
         return res;
-
     }
-
 
     Result<void> MySqlConnection::commit()
     {
@@ -385,10 +429,7 @@ namespace reactor::persistence {
             res.err.message = err.what();
         }
         return res;
-
-
     }
-
 
     Result<void> MySqlConnection::rollback()
     {
@@ -414,7 +455,5 @@ namespace reactor::persistence {
             res.err.message = err.what();
         }
         return res;
-
-
     }
 }//namespace reactor::persistence

@@ -12,6 +12,12 @@
 
 namespace reactor::core
 {
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // epoll_create(1) 的 size 参数在 Linux 2.6.8+ 已被忽略，传 1 即可。
+    // readyEvents_ 预分配 520 槽，覆盖绝大多数场景下的并发连接数。
     EpollDispatcher::EpollDispatcher(EventLoop *evLoop)
         : Dispatcher(evLoop), epfd_(-1), maxNode_(520), readyEvents_(maxNode_)
     {

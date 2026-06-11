@@ -56,6 +56,12 @@ namespace reactor::persistence
         }
     } // namespace
 
+    // ====================================================================
+    // 配置校验
+    // ====================================================================
+    //
+    // 逐字段检查，失败即返回（短路），err 中包含首个失败原因。
+    // 检查顺序：驱动类型 → 连接模式 → 连接信息 → 超时 → 生命周期 → 初始化 SQL。
     bool SqlConfig::validate(std::string &err) const
     {
         err.clear();
@@ -142,6 +148,12 @@ namespace reactor::persistence
         return true;
     }
 
+    // ====================================================================
+    // JSON 反序列化
+    // ====================================================================
+    //
+    // 使用 j.at(key) 而非 j.value(key, default)，确保缺失必填字段时抛出异常。
+    // driver/connMode 字符串通过 parseDriverKind_/parseConnMode_ 转换为枚举。
     void from_json(const nlohmann::json &j, SqlConfig &cfg)
     {
         cfg.driver = parseDriverKind_(j.at("driver").get<std::string>());

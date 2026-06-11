@@ -10,10 +10,22 @@
 
 namespace reactor::core
 {
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // 空实现：evLoop_ 由参数赋值，channel_ 初始为 nullptr。
+    // setChannel 在每次 add/remove/modify 前被调用，因此构造时无需设置。
     Dispatcher::Dispatcher(EventLoop *evLoop) : evLoop_(evLoop), channel_(nullptr)
     {
     }
 
+    // ====================================================================
+    // 工厂：createDispatcher
+    // ====================================================================
+    //
+    // 根据 type 分支创建具体子类。
+    // 新增后端类型时需在此处添加分支，并更新 DispatcherType 枚举。
     std::unique_ptr<Dispatcher> createDispatcher(EventLoop *evLoop, DispatcherType type)
     {
         switch (type)
@@ -29,6 +41,11 @@ namespace reactor::core
         }
     }
 
+    // ====================================================================
+    // 字符串 → 枚举转换
+    // ====================================================================
+    //
+    // 先转小写再匹配，使命令行输入的 "Epoll"/"EPOLL"/"epoll" 均能正确识别。
     DispatcherType dispatcherTypeFromString(std::string_view name, DispatcherType fallback)
     {
         std::string value(name);

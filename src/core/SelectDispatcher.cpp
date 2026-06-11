@@ -70,6 +70,13 @@ namespace reactor::core
         return StatusCode::kOk;
     }
 
+    // ====================================================================
+    // dispatch — select 系统调用
+    // ====================================================================
+    //
+    // 使用 readSet_/writeSet_ 的副本（rdtmp/wrtmp）调用 select，
+    // 避免 select 修改原始集合。
+    // 遍历 0 到 maxSize_-1 全部 fd，复杂度 O(maxSize_)。
     StatusCode SelectDispatcher::dispatch(int timeout)
     {
         struct timeval val;

@@ -11,6 +11,12 @@
 
 namespace reactor::core
 {
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // new[] 分配的 pollfd 数组全部初始化为 fd=-1、events=0、revents=0，
+    // 避免未初始化的 pollfd 被 poll 系统调用误判。
     PollDispatcher::PollDispatcher(EventLoop *evLoop) : Dispatcher(evLoop), maxfd_(0)
     {
         fds_ = new struct pollfd[maxNode_];
@@ -127,6 +133,8 @@ namespace reactor::core
             }
             return StatusCode::kError;
         }
+        // 遍历全部 maxNode_ 个元素，跳过 fd==-1 的空位。
+        // POLLERR/POLLHUP/POLLNVAL 统一映射为 kErrorEvent。
         for (int i = 0; i < maxNode_; i++)
         {
             uint32_t ev = 0;

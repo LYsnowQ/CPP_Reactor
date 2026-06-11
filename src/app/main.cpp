@@ -20,6 +20,7 @@
 #include "net/TcpConnection.hpp"
 #include "persistence/ThreadLocalSqlConn.hpp"
 #include "protocol/HttpRequest.hpp"
+#include "protocol/HttpRouter.hpp"
 #include "spdlog/spdlog.h"
 #include "utils/JsonConfigLoader.hpp"
 
@@ -67,13 +68,6 @@ int main(int argc, const char **argv)
         reactor::net::TcpServer server(port, maxThreads, dispatcherType, keepAliveEnabled,
                                        keepAliveMaxRequests, keepAliveIdleMs);
 
-    /*    // 默认挂载静态目录浏览器适配器，便于本机演示。
-        server.setRequestHandler(
-            reactor::handler::StaticFileHandler::createHandler(staticRoot));
-
-        const auto status = server.run();
-        return (status == reactor::core::StatusCode::kOk) ? 0 : -1;
-    */
         //配置挂载目录
         auto sqlConfigPath = origCwd/"config"/"SQLConfig.json";
         auto sqlCfg = reactor::utils::config::loadJsonFileOrThrow(sqlConfigPath);
@@ -91,22 +85,21 @@ int main(int argc, const char **argv)
         );
         sqlExecutor->start();
 
-        auto sqlHandler = reactor::handler::SqlHandler::createHandler(sqlExecutor);
-        auto staticHandler = reactor::handler::StaticFileHandler::createHandler(staticRoot);
+        auto sqlHandler = std::make_shared<reactor::handler::SqlHandler>(sqlExecutor);
+        auto staticHandler = std::make_shared<reactor::handler::StaticFileHandler>(staticRoot);
+
+        reactor::net::protocol::HttpRouter router;
+        router.get("/query", sqlHandler);
+        router.get("/sql", sqlHandler);
+        router.addPrefix("/", staticHandler);
 
         server.setRequestHandler(
-                [staticHandler = std::move(staticHandler),
-                sqlHandler = std::move(sqlHandler)]
+                [router = std::move(router)]
                 (reactor::net::protocol::HttpRequest &req,
-                 reactor::net::TcpConnection &conn)
+                 reactor::net::TcpConnection &conn) mutable
                 -> reactor::net::TcpConnection::HandlerResult
                 {
-                    const auto url = req.getUrl();
-                    if(url.find("/query")==0 || url.find("/sql") == 0)
-                    {
-                        return sqlHandler(req,conn);
-                    }
-                    return staticHandler(req,conn);
+                    return router.dispatch(req, conn);
                 }
             );
         const auto status = server.run();

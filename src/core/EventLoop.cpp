@@ -24,6 +24,18 @@ namespace reactor::core
     {
     }
 
+    // ====================================================================
+    // 构造
+    // ====================================================================
+    //
+    // socketPair 用于跨线程唤醒：
+    // 其他线程投递任务时向 socketPair[1] 写一个字节，
+    // 打断 dispatcher 的阻塞等待，使 EventLoop 能及时处理新任务。
+    //
+    // socketPair 两端均设为 O_NONBLOCK，防止跨线程 write 阻塞。
+    //
+    // 创建本地读 Channel（监听 socketPair[0] 的读事件），
+    // 通过 addTask ADD 注册到 channelMap_，使事件循环能响应唤醒信号。
     EventLoop::EventLoop(std::string name, DispatcherType type)
         : threadName_(name), threadID_(std::this_thread::get_id())
     {
@@ -67,6 +79,13 @@ namespace reactor::core
         }
     }
 
+    // ====================================================================
+    // 跨线程唤醒
+    // ====================================================================
+    //
+    // taskWakeup_ 写入单字节 'w' 唤醒目标线程。
+    // readLocalMessage_ 循环读取直到 EAGAIN，消费所有堆积的唤醒信号。
+
     // 本地写数据
     void EventLoop::taskWakeup_()
     {
@@ -89,6 +108,13 @@ namespace reactor::core
         }
     }
 
+    // ====================================================================
+    // 主循环
+    // ====================================================================
+    //
+    // isQuit_ 初始为 true，run 中设为 false，
+    // 确保构造后到 run 调用前 shutdown 不会误退出。
+    // 每轮循环：dispatch 等待事件 → processTaskQ 处理任务+回调。
     StatusCode EventLoop::run()
     {
         isQuit_.store(false); // 延迟启动非初始化时启动
@@ -109,6 +135,14 @@ namespace reactor::core
         return StatusCode::kOk;
     }
 
+    // ====================================================================
+    // 事件分发
+    // ====================================================================
+    //
+    // 错误事件优先：直接 remove 销毁 Channel。
+    // 读事件执行后重查 channelMap_：
+    //   读回调可能通过同线程 processTaskQ 触发 DELETE 导致 Channel 被销毁，
+    //   若不重查，后续写事件处理将解引用悬空指针。
     StatusCode EventLoop::active(int fd, uint32_t event)
     {
         if (fd < 0)
@@ -131,7 +165,7 @@ namespace reactor::core
         if (event & static_cast<uint32_t>(net::FDEvent::kReadEvent) && channel->haveReadCallback())
         {
             channel->readFunc();
-            // 读回调可能在同线程中投递并立即处理 DELETE。
+            // 读回调可能通过同线程投递并立即处理 DELETE。
             // 重新检查 channel 是否存在，避免解引用悬空指针。
             it = channelMap_.find(fd);
             if (it == channelMap_.end() || !it->second)
@@ -150,17 +184,24 @@ namespace reactor::core
         return StatusCode::kOk;
     }
 
+    // ====================================================================
+    // 任务投递
+    // ====================================================================
+    //
+    // 同一线程投递非 DELETE 任务直接同步 processTaskQ：
+    //   减少一次 socketpair 唤醒开销。
+    // DELETE 无论是否同线程均仅入队 + 跨线程唤醒：
+    //   避免 delete 过程中 dispatch 循环正在 active 遍历 channelMap_ 导致迭代器失效。
     StatusCode EventLoop::addTask(std::unique_ptr<net::Channel> channel, ChannelOP type)
     {
         {
             std::lock_guard<std::mutex> lk(mutex_);
             taskQ_.push(ChannelElement{type, std::move(channel), -1});
         }
-        // 细节处理:
-        // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
-        //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
-        //   2) 新增 fd 的操作由主线程发起。
-
+        // 当前线程直接处理非 DELETE 任务，减少唤醒开销。
+        // DELETE 即使同线程也只入队 + 跨线程唤醒：
+        // 若 dispatch 循环正在 active 中遍历 channelMap_，
+        // 同步 processTaskQ 递归进入 remove_ 会导致迭代器失效。
         const bool sameThread = (threadID_ == std::this_thread::get_id());
         if (sameThread && type != ChannelOP::DELETE)
         {
@@ -190,11 +231,10 @@ namespace reactor::core
             std::lock_guard<std::mutex> lk(mutex_);
             taskQ_.push(ChannelElement{type, nullptr, fd});
         }
-        // 细节处理:
-        // 对于往链表中新增节点，可能由当前线程处理，也可能别的线程处理。
-        //   1) 修改 fd 事件的操作，可能由当前线程发起，也由当前线程处理。
-        //   2) 新增 fd 的操作由主线程发起。
-
+        // 当前线程直接处理非 DELETE 任务，减少唤醒开销。
+        // DELETE 即使同线程也只入队 + 跨线程唤醒：
+        // 若 dispatch 循环正在 active 中遍历 channelMap_，
+        // 同步 processTaskQ 递归进入 remove_ 会导致迭代器失效。
         const bool sameThread = (threadID_ == std::this_thread::get_id());
         if (sameThread && type != ChannelOP::DELETE)
         {
@@ -214,6 +254,16 @@ namespace reactor::core
         return addTask(fd, ChannelOP::DELETE);
     }
 
+    // ====================================================================
+    // 任务与回调队列处理
+    // ====================================================================
+    //
+    // 加锁交换到本地队列处理，缩短锁持有时间。
+    //
+    // ChannelElement 中，DELETE/MODIFY 优先用 fd 字段，
+    // 兼容部分调用方持 Channel 对象投递 DELETE 的历史情况。
+    //
+    // 回调队列在任务队列之后处理，保证 Channel 状态变更先于回调执行。
     StatusCode EventLoop::processTaskQ()
     {
         std::queue<ChannelElement> localQ;
@@ -289,6 +339,12 @@ namespace reactor::core
         taskWakeup_();
     }
 
+    // ====================================================================
+    // Channel 注册
+    // ====================================================================
+    //
+    // 若 channelMap_ 中已存在此 fd（重复注册），返回 kError。
+    // dispatcher->add 失败时回滚 channelMap_ 的插入，保证状态一致性。
     StatusCode EventLoop::add_(std::unique_ptr<net::Channel> channel)
     {
         int fd = channel->getSocket();
@@ -308,6 +364,12 @@ namespace reactor::core
         return StatusCode::kError;
     }
 
+    // ====================================================================
+    // Channel 移除
+    // ====================================================================
+    //
+    // dispatcher->remove 成功后从 channelMap_ 擦除（触发 unique_ptr 析构）。
+    // 若 remove 失败（如 epoll_ctl DEL 返回 ENOENT），仅记录不擦除。
     StatusCode EventLoop::remove_(int fd)
     {
         if (channelMap_.find(fd) == channelMap_.end())
