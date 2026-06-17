@@ -19,47 +19,41 @@ target_sources(main_run PRIVATE ${PROJECT_SOURCES})
 # 编译选项
 target_compile_options(main_run PRIVATE -Wall -Wextra)
 
-#依赖处理 
+# ============================================================
+# 第三方库 — third_party/ 目录自包含
+# ============================================================
 
 # Threads
 find_package(Threads REQUIRED)
 
-# Conan CMakeDeps 会在构建目录下生成 *-config.cmake。
-# 使用 Conan preset 时，CMAKE_BINARY_DIR 通常是 build/conan/build/Release。
-if(EXISTS "${CMAKE_BINARY_DIR}/generators")
-    list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/generators")
-endif()
-
-find_package(spdlog REQUIRED CONFIG)
-find_package(nlohmann_json REQUIRED CONFIG)
-
-# MySQL Connector/C++
-find_path(MYSQLCPPCONN_INCLUDE_DIR
-    NAMES jdbc/mysql_driver.h
-    PATHS /usr/include/mysql-cppconn
-    REQUIRED
+# spdlog (header-only，已嵌入 third_party)
+target_include_directories(main_run
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
-find_library(MYSQLCPPCONN_LIBRARY
-    NAMES mysqlcppconn
-    PATHS /usr/lib/x86_64-linux-gnu /usr/local/lib
-    REQUIRED
+# nlohmann_json (header-only，单头文件)
+target_include_directories(main_run
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json
 )
 
-
-add_library(mysql-connector-cpp::mysql-connector-cpp UNKNOWN IMPORTED)
-set_target_properties(mysql-connector-cpp::mysql-connector-cpp PROPERTIES
-    IMPORTED_LOCATION "${MYSQLCPPCONN_LIBRARY}"
-    INTERFACE_INCLUDE_DIRECTORIES "${MYSQLCPPCONN_INCLUDE_DIR}"
+# MySQL Connector/C++ (JDBC 接口)
+target_include_directories(main_run
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/include
 )
-
 
 target_link_libraries(main_run
     PRIVATE
         Threads::Threads
-        spdlog::spdlog
-        nlohmann_json::nlohmann_json
-        mysql-connector-cpp::mysql-connector-cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib/libmysqlcppconn.so
+)
+
+# 确保运行时能在 third_party 目录找到 .so (CMake 构建时设置 rpath)
+set_target_properties(main_run PROPERTIES
+    BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib"
+    INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib"
 )
 
 

@@ -130,13 +130,13 @@ Client ──► TcpServer::accept()
 
 | 依赖 | 说明 | 安装命令 |
 |------|------|---------|
-| MySQL Connector/C++ | MySQL 客户端库 | `apt install libmysqlcppconn-dev` |
-| nlohmann-json3-dev | JSON 解析 (可选，Make 模式下需手动指定) | `apt install nlohmann-json3-dev` |
-| spdlog (header-only) | 日志库，已内嵌在 `third_party/` | 无需额外安装 |
+| MySQL Connector/C++ | MySQL 客户端库（已内嵌 `third_party/mysql-cppconn`） | 无需额外安装 |
+| nlohmann_json | JSON 解析（已内嵌 `third_party/nlohmann_json`） | 无需额外安装 |
+| spdlog (header-only) | 日志库（已内嵌 `third_party/spdlog`） | 无需额外安装 |
 | pymysql | Python 测试数据注入 (仅测试用) | `pip install pymysql` |
 | wrk | HTTP 压测工具 (仅压测用) | `apt install wrk` |
 
-> **注意**：当使用 `Makefile` 直接编译时，依赖通过系统包管理或手动指定路径接入。使用 `CMake + Conan` 时，Conan 自动管理 nlohmann_json 和 spdlog。
+> **所有 C++ 依赖（MySQL Connector/C++、nlohmann_json、spdlog）均已内嵌在 `third_party/` 目录**，clone 后即可编译，无需额外安装系统包或使用 Conan。
 
 ---
 
@@ -145,40 +145,20 @@ Client ──► TcpServer::accept()
 ### 使用 Make（推荐）
 
 ```bash
-# 1. 安装系统依赖
-sudo apt update
-sudo apt install -y g++ make libmysqlcppconn-dev nlohmann-json3-dev
-
-# 2. 编译项目
+# 1. 编译项目（所有依赖已内嵌在 third_party/）
 make clean && make -j$(nproc)
 
-# 3. 启动服务器（提供默认参数）
+# 2. 启动服务器（提供默认参数）
 ./main_run 8080 . epoll 4 close
 
-# 4. 验证服务
+# 3. 验证服务
 curl http://127.0.0.1:8080/
 
-# 5. 冒烟测试
+# 4. 冒烟测试
 bash tests/test_smoke.sh http://127.0.0.1:8080/
 ```
 
 启动后服务器默认监听 `8080` 端口，提供 HTTP 服务。访问 `http://127.0.0.1:8080/` 可看到静态文件目录索引。
-
-### 使用 CMake + Conan
-
-```bash
-# 1. 安装 Conan
-pip install conan
-
-# 2. 配置并构建
-mkdir -p build/conan && cd build/conan
-conan install ../.. --output-folder=. --build=missing
-cmake ../.. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug
-cmake --build .
-
-# 3. 运行
-./build/conan/main_run 8080 . epoll 4 close
-```
 
 ---
 
@@ -409,7 +389,11 @@ CPPReactor/
 │   └── utils/                    #   JsonConfigLoader, StringUtils
 │
 ├── third_party/
-│   └── spdlog/                   # 内嵌 spdlog (header-only)
+│   ├── spdlog/                   # 内嵌 spdlog (header-only)
+│   ├── nlohmann_json/            # 内嵌 nlohmann_json (header-only)
+│   └── mysql-cppconn/            # 内嵌 MySQL Connector/C++
+│       ├── include/              #   JDBC 头文件
+│       └── lib/                  #   .so 运行时库
 │
 ├── config/
 │   └── SQLConfig.json            # SQL 连接配置模板
@@ -482,7 +466,7 @@ CPPReactor/
 | 数据库 | MySQL Connector/C++ 9.7 / JDBC |
 | 日志 | spdlog 1.14 (header-only) |
 | JSON | nlohmann_json 3.11 |
-| 构建 | Make / CMake + Conan 2 |
+| 构建 | Make |
 | 容器 | Docker, docker-compose |
 | 测试 | curl, Python socket, wrk |
 | 代码工具 | clang-format, clangd |

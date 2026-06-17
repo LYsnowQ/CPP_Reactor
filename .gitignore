@@ -48,3 +48,4 @@ build/
 
 # Design specification docs (not iteration logs)
 docs/spec/
+docs/learning/

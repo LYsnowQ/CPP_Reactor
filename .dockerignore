@@ -2,8 +2,6 @@
 .gitignore
 build/
 cmake-build-*/
-conanfile.py
-CMakeLists.txt
 CMakeUserPresets.json
 CMakePresets.json
 compile_commands.json

@@ -8,14 +8,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     make \
-    libmysqlcppconn-dev \
-    nlohmann-json3-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
+# 先复制第三方库（利用 Docker 缓存层）
+COPY third_party/ /build/third_party/
+
+# 再复制源码和构建配置
 COPY . .
+
+# 删除不需要的构建产物（避免冲突）
+RUN rm -rf build/
 
 RUN make -j$(nproc)
 
@@ -26,20 +31,21 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Copy the compiled binary
+# 复制编译产物
 COPY --from=builder /build/main_run /app/main_run
 COPY --from=builder /build/config /app/config
 
-# Copy MySQL connector runtime libs (symlinks + actual .so)
-COPY --from=builder /lib/x86_64-linux-gnu/libmysqlcppconn.so* /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libmysqlcppconn.so.10 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libmysqlcppconn.so.10.9.7.0 /lib/x86_64-linux-gnu/
+# 复制 MySQL Connector/C++ 运行时 .so（含 symlink 和实际文件）
+COPY --from=builder /build/third_party/mysql-cppconn/lib/ /app/lib/
 
-# Copy SSL libs (MySQL connector dependency)
+# 复制 SSL 依赖（MySQL Connector 的传递依赖）
 COPY --from=builder /usr/lib/x86_64-linux-gnu/libcrypto.so* /usr/lib/x86_64-linux-gnu/
 COPY --from=builder /usr/lib/x86_64-linux-gnu/libssl.so* /usr/lib/x86_64-linux-gnu/
 
-# Copy entrypoint
+# 设置运行时库搜索路径
+ENV LD_LIBRARY_PATH=/app/lib:${LD_LIBRARY_PATH}
+
+# 复制入口脚本
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 RUN chmod +x /app/docker-entrypoint.sh && \
@@ -47,7 +53,7 @@ RUN chmod +x /app/docker-entrypoint.sh && \
 
 WORKDIR /app
 
-# MySQL connection defaults (overridable via environment)
+# MySQL 连接环境变量（可在 docker-compose 或 run 时覆盖）
 ENV MYSQL_HOST=mysql \
     MYSQL_PORT=3306 \
     MYSQL_USER=root \
