@@ -81,9 +81,9 @@ echo "[sql-bench] duration=${DURATION}"
 echo "[sql-bench] output=${OUT_MD}"
 
 # ── 启动服务器 ──
-pkill -f './main_run' >/dev/null 2>&1 || true
+pkill -f 'build/main_run' >/dev/null 2>&1 || true
 sleep 1
-./main_run "${PORT}" "${ROOT_DIR}" epoll 12 close >/tmp/cppreactor_sqlbench.log 2>&1 &
+./build/main_run "${PORT}" "${ROOT_DIR}" epoll 12 close >/tmp/cppreactor_sqlbench.log 2>&1 &
 SERVER_PID=$!
 
 # ── 等待服务器端口就绪，超时 5 秒 ──
@@ -165,7 +165,7 @@ done
 # ── 清理 ──
 kill "${SERVER_PID}" 2>/dev/null || true
 wait "${SERVER_PID}" 2>/dev/null || true
-pkill -f './main_run' >/dev/null 2>&1 || true
+pkill -f 'build/main_run' >/dev/null 2>&1 || true
 
 echo "[sql-bench] done"
 echo ""

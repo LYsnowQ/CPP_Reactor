@@ -23,8 +23,8 @@ DURATION="${3:-12}"
 PORT_HTTP=8080
 PORT_ECHO=8081
 
-BIN_HTTP="${ROOT_DIR}/main_run"
-BIN_ECHO="${ROOT_DIR}/main_echo"
+BIN_HTTP="${ROOT_DIR}/build/main_run"
+BIN_ECHO="${ROOT_DIR}/build/main_echo"
 OUT_DIR="${ROOT_DIR}/tests/benchmarks"
 SERVER_LOG="/tmp/cppreactor_bench_server.log"
 PID_FILE="/tmp/cppreactor_bench_server.pid"

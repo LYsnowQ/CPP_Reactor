@@ -1,5 +1,5 @@
-TARGET := main_run
-TARGET_ECHO := main_echo
+TARGET := build/main_run
+TARGET_ECHO := build/main_echo
 
 CXX := g++
 CXXFLAGS := -std=c++20 -Wall -Wextra -O2 -g
@@ -10,7 +10,7 @@ CPPFLAGS := $(addprefix -I,$(INCLUDE_DIRS)) \
     -I./third_party/mysql-cppconn/include
 LDFLAGS := -L./third_party/mysql-cppconn/lib
 LDLIBS := -pthread -lmysqlcppconn
-RPATH := -Wl,-rpath,'$$ORIGIN/third_party/mysql-cppconn/lib'
+RPATH := -Wl,-rpath,'$$ORIGIN/../third_party/mysql-cppconn/lib'
 
 SRC_DIR := src
 BUILD_DIR := build
@@ -25,9 +25,11 @@ CORE_OBJ := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 all: $(TARGET) $(TARGET_ECHO)
 
 $(TARGET): $(CORE_OBJ) $(OBJ_DIR)/app/main.o
+	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) $(RPATH) -o $@ $^ $(LDLIBS)
 
 $(TARGET_ECHO): $(CORE_OBJ) $(OBJ_DIR)/app/main_echo.o
+	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) $(RPATH) -o $@ $^ $(LDLIBS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -35,5 +37,4 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(TARGET_ECHO)
 	rm -rf $(BUILD_DIR)

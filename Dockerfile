@@ -32,8 +32,8 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 复制编译产物
-COPY --from=builder /build/main_run /app/main_run
-COPY --from=builder /build/main_echo /app/main_echo
+COPY --from=builder /build/build/main_run /app/main_run
+COPY --from=builder /build/build/main_echo /app/main_echo
 COPY --from=builder /build/config /app/config
 
 # 复制 MySQL Connector/C++ 运行时 .so（含 symlink 和实际文件）

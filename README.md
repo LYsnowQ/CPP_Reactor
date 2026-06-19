@@ -159,7 +159,7 @@ Client ──► TcpServer::accept()
 make clean && make -j$(nproc)
 
 # 2. 启动服务器（提供默认参数）
-./main_run 8080 . epoll 4 close
+./build/main_run 8080 . epoll 4 close
 
 # 3. 验证服务
 curl http://127.0.0.1:8080/
@@ -209,7 +209,7 @@ vim config/SQLConfig.json
 ### 命令行参数
 
 ```bash
-./main_run <port> <resource_path> [dispatcher] [threads] [conn_mode] [keepalive_max_reqs] [keepalive_idle_ms]
+./build/main_run <port> <resource_path> [dispatcher] [threads] [conn_mode] [keepalive_max_reqs] [keepalive_idle_ms]
 ```
 
 | 参数 | 说明 | 默认值 |
@@ -226,10 +226,10 @@ vim config/SQLConfig.json
 
 ```bash
 # 使用 epoll + 4 线程 + keepalive
-./main_run 8080 /var/www epoll 4 keepalive 100 10000
+./build/main_run 8080 /var/www epoll 4 keepalive 100 10000
 
 # 使用 poll + 6 线程 + short-lived 连接
-./main_run 8080 . poll 6 close
+./build/main_run 8080 . poll 6 close
 ```
 
 ---
@@ -293,7 +293,7 @@ docker run -d \
 ```bash
 # 1. 编译并启动服务
 make clean && make -j$(nproc)
-./main_run 8080 . epoll 4 close &
+./build/main_run 8080 . epoll 4 close &
 
 # 2. 冒烟测试
 bash tests/test_smoke.sh http://127.0.0.1:8080/

@@ -27,7 +27,7 @@ tests/
 make clean && make -j$(nproc)
 
 # 2. 启动服务
-./main_run 8080 . epoll 4 keepalive 100 10000
+./build/main_run 8080 . epoll 4 keepalive 100 10000
 
 # 3. 冒烟测试
 bash tests/test_smoke.sh http://127.0.0.1:8080/
