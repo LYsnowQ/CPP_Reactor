@@ -107,7 +107,7 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 
     TcpConnection(int fd, reactor::core::EventLoop *evLoop, std::string name);
 
-    void destory_();
+    void destroy_();
     void onChannelDestroyed_();
     bool isParseWaitTimeout_() const;
     void appendSimpleResponse_(int statusCode, std::string_view reasonPhrase,

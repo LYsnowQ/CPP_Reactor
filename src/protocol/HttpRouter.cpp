@@ -127,7 +127,7 @@ namespace reactor::net::protocol
     TcpConnection::HandlerResult HttpRouter::dispatch(HttpRequest &req, TcpConnection &conn)
     {
         const auto url = req.getUrl();
-        const auto method = req.getMethed();
+        const auto method = req.getMethod();
         const auto urlSegs = splitPath_(url);
 
         // --- 第一轮：精确匹配（非前缀）---

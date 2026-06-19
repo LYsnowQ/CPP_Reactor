@@ -80,12 +80,10 @@ class TcpServer
   private:
     int lfd_;
     uint16_t port_;
-    std::thread accepter_;
     std::map<int, std::shared_ptr<TcpConnection>> conns_;
     std::mutex connsMutex_;
     std::vector<int> pendingCloseFds_;
     std::mutex pendingCloseMutex_;
-    std::unique_ptr<core::EventLoop> baseLoop_;
     std::unique_ptr<IOThreadPool> threadPool_;
     core::DispatcherType dispatcherType_;
     bool keepAliveEnabled_;

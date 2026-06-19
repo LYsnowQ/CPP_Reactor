@@ -33,7 +33,7 @@ namespace reactor::net::protocol
         HttpRequest(const HttpRequest &) = delete;
         HttpRequest &operator=(const HttpRequest &) = delete;
 
-        std::string getMethed();
+        std::string getMethod();
         std::string getUrl();
         std::string version();
 

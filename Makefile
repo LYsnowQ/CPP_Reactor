@@ -1,7 +1,8 @@
 TARGET := main_run
+TARGET_ECHO := main_echo
 
 CXX := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -g
+CXXFLAGS := -std=c++20 -Wall -Wextra -O2 -g
 INCLUDE_DIRS := $(shell find include -type d)
 CPPFLAGS := $(addprefix -I,$(INCLUDE_DIRS)) \
     -I./third_party \
@@ -15,14 +16,18 @@ SRC_DIR := src
 BUILD_DIR := build
 OBJ_DIR := $(BUILD_DIR)/obj
 
-SRC := $(shell find $(SRC_DIR) -type f -name "*.cpp")
-OBJ := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
+# 所有源文件（不含 main 入口文件，它们单独链接）
+SRC := $(filter-out %/main.cpp %/main_echo.cpp, $(shell find $(SRC_DIR) -type f -name "*.cpp"))
+CORE_OBJ := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 
-.PHONY: all clean
+.PHONY: all clean echo
 
-all: $(TARGET)
+all: $(TARGET) $(TARGET_ECHO)
 
-$(TARGET): $(OBJ)
+$(TARGET): $(CORE_OBJ) $(OBJ_DIR)/app/main.o
+	$(CXX) $(LDFLAGS) $(RPATH) -o $@ $^ $(LDLIBS)
+
+$(TARGET_ECHO): $(CORE_OBJ) $(OBJ_DIR)/app/main_echo.o
 	$(CXX) $(LDFLAGS) $(RPATH) -o $@ $^ $(LDLIBS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -30,5 +35,5 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(TARGET_ECHO)
 	rm -rf $(BUILD_DIR)

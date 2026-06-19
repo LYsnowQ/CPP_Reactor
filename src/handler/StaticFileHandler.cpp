@@ -257,7 +257,7 @@ reactor::handler::StaticFileHandler::handle(
     reactor::net::TcpConnection &)
 {
     reactor::net::TcpConnection::HandlerResult result;
-    const auto method = req.getMethed();
+    const auto method = req.getMethod();
     if (method != "GET" && method != "get")
     {
         result.statusCode = 405;

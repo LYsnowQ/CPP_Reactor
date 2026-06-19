@@ -29,7 +29,7 @@ namespace reactor::net
     TcpServer::TcpServer(uint16_t port, uint32_t maxThread, core::DispatcherType dispatcherType,
                          bool keepAliveEnabled, uint32_t keepAliveMaxRequests,
                          uint32_t keepAliveIdleTimeoutMs)
-        : lfd_(-1), port_(port), baseLoop_(nullptr), dispatcherType_(dispatcherType),
+        : lfd_(-1), port_(port), dispatcherType_(dispatcherType),
           keepAliveEnabled_(keepAliveEnabled),
           keepAliveMaxRequests_((keepAliveMaxRequests == 0) ? 1U : keepAliveMaxRequests),
           keepAliveIdleTimeoutMs_((keepAliveIdleTimeoutMs == 0) ? 1U : keepAliveIdleTimeoutMs),
@@ -224,11 +224,6 @@ namespace reactor::net
         if (threadPool_)
         {
             threadPool_->stop();
-        }
-
-        if (accepter_.joinable())
-        {
-            accepter_.join();
         }
 
         {

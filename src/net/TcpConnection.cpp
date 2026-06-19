@@ -94,7 +94,7 @@ namespace reactor::net
 
     TcpConnection::~TcpConnection()
     {
-        destory_();
+        destroy_();
     }
 
     int TcpConnection::fd() const
@@ -107,7 +107,7 @@ namespace reactor::net
         return name_;
     }
 
-    void TcpConnection::destory_()
+    void TcpConnection::destroy_()
     {
         channel_ = nullptr;
         state_ = kDisconnected;

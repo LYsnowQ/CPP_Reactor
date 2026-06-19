@@ -57,7 +57,7 @@ namespace reactor::net::protocol
         return {core::StatusCode::kOk, std::move(*holder), "ok", false};
     }
 
-    std::string HttpRequest::getMethed()
+    std::string HttpRequest::getMethod()
     {
         if (method_.length())
         {

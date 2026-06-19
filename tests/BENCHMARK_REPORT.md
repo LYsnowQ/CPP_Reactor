@@ -22,7 +22,7 @@
 | 构建工具 | Make |
 | MySQL Connector/C++ | 9.7.0 (libmysqlcppconn10) |
 | 压测工具 | wrk 4.1.0 (epoll) |
-| 编译优化 | -g (Debug) |
+| 编译优化 | -O2 -g (Optimized) |
 | 链接库 | -lmysqlcppconn -pthread |
 
 ### 远程数据库
@@ -43,24 +43,39 @@
 ### 运行命令
 
 ```bash
-bash tests/bench_static.sh . M
+# 多配置探索
+bash tests/bench.sh static M
+
+# 梯度加压（逐步增加并发，到上限自动停止）
+bash tests/bench.sh static GRADIENT
 ```
 
-### 结果
+### 结果（优化后，编译 -O2 + 线程调优）
+
+**M 探索（epoll 12th keepalive 基准）：**
 
 | case | dispatcher | io_threads | conn_mode | wrk_threads | connections | duration | 总请求 | QPS | 平均延迟 | 传输速率 | 套接字错误 |
 |------|-----------|----------:|----------|-----------:|----------:|:--------|------:|----:|--------:|--------:|----------|
-| M1 | epoll | 4 | keepalive | 4 | 150 | 12s | 111,092 | 7,669 | 15.83ms | 8.40MB/s | connect 0, read 1042, write 0, timeout 148 |
-| M2 | epoll | 6 | keepalive | 6 | 240 | 12s | 95,158 | 7,906 | 30.45ms | 8.66MB/s | connect 0, read 846, write 0, timeout 0 |
-| M3 | epoll | 6 | close | 6 | 240 | 12s | 122,495 | 10,143 | 23.64ms | 11.07MB/s | connect 0, read 5978, write 0, timeout 0 |
-| M4 | poll | 6 | keepalive | 6 | 240 | 12s | 134,141 | 9,252 | 21.59ms | 10.14MB/s | connect 0, read 1202, write 0, timeout 240 |
+| M1 | epoll | 8 | keepalive | 8 | 300 | 8s | 390,660 | 35,593 | 6.32ms | 46.98MB/s | connect 0, read 3766, write 0, timeout 294 |
+| M2 | epoll | 12 | keepalive | 12 | 500 | 8s | 300,659 | 37,116 | 12.95ms | 48.99MB/s | connect 0, read 2794, write 0, timeout 0 |
+| M3 | epoll | 16 | keepalive | 16 | 800 | 8s | 356,292 | 44,120 | 18.16ms | 58.23MB/s | connect 0, read 3210, write 0, timeout 0 |
+| M4 | epoll | 12 | close | 12 | 500 | 8s | 197,699 | 24,461 | 8.81ms | 32.17MB/s | connect 0, read 8768, write 0, timeout 0 |
+| M5 | poll | 12 | keepalive | 12 | 500 | 8s | 417,415 | 51,537 | 9.63ms | 68.02MB/s | connect 0, read 3947, write 0, timeout 0 |
+
+**GRADIENT 梯度（epoll 12 threads keepalive）：**
+
+| 并发数 | wrk 线程 | QPS | 平均延迟 |
+|-------|---------|-----|---------|
+| 50 | 4 | 41,421 | 0.79ms |
+| 100 | 4 | 60,061 | 1.65ms |
+| 200 | 8 | **60,645** | 3.32ms |
+| 500 | 12 | 58,423 | 8.94ms |
 
 ### 分析
 
-- **最高 QPS: 10,143**（M3: epoll 6线程 close 模式）
-- **最低延迟: 15.83ms**（M1: epoll 4线程 keepalive）
-- epoll 与 poll 性能接近
-- close 模式比 keepalive 高约 15%（因请求更简单，但 socket 错误也更多）
+- **最高 QPS: 60,645**（GRADIENT: 200 并发，epoll 12 keepalive）
+- **相比优化前（10,143 QPS）提升约 6 倍**，主要得益于 `-O2` 编译优化和线程数调整
+- close 模式（M4: 24,461 QPS）仍受单线程 accept 限制
 
 ---
 
@@ -106,9 +121,8 @@ bash tests/bench_sql.sh . S
 
 ## 历史记录
 
-| 日期 | 报告 | 备注 |
-|------|------|------|
-| 2026-06-02 | 本报告 | 首次完整记录 SQL + 静态压测 |
-| 2026-04-25 | [bench_profile_M_20260425.md](benchmarks/bench_profile_M_20260425.md) | 初始静态压测基线 |
-| 2026-04-25 | [bench_gradient_20260425_local.md](benchmarks/bench_gradient_20260425_local.md) | 梯度压测 |
-| 2026-04-25 | [bench_matrix_20260425_local.md](benchmarks/bench_matrix_20260425_local.md) | 矩阵压测 |
+| 日期 | 备注 |
+|------|------|
+| 2026-06-19 | 编译优化 -O2 + 线程调优，QPS 10k→60k；Echo 基准 1.78M QPS；脚本合并为 bench.sh |
+| 2026-06-02 | 首次完整记录 SQL + 静态压测（编译 -O0，QPS ~10k） |
+| 2026-04-25 | 初始静态压测基线 |

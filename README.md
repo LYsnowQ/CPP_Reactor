@@ -41,6 +41,16 @@ CPPReactor 是一款从零实现的 C++20 高性能 HTTP 服务器框架，核�
 
 > 该项目是 C++ 网络编程学习实践的产物，经历了数十次迭代演进，涵盖了完整的 TCP 连接生命周期管理、HTTP 协议解析、Reactor 多线程模型、连接池、可观测性等主题。
 
+### 性能概览
+
+| 场景 | 峰值 QPS | 说明 |
+|------|---------|------|
+| **Echo 基准**（无业务逻辑） | **1,781,742** | 框架纯 IO 吞吐上限，验证 epoll Reactor 架构可达百万级 |
+| **HTTP 静态文件**（目录索引） | **60,645** | 含 HTTP 解析 + 文件遍历 + 响应拼装，受业务代码开销限制 |
+| **SQL 远程查询** | ~15-17 | 瓶颈在远程数据库网络延迟，非服务器自身 |
+
+> Echo 与 HTTP 之间约 **29 倍**的差距，全部来源于**业务代码开销**（HTTP 解析、字符串分配、目录 IO、响应拼接），而非架构选型问题。这意味着将业务逻辑剥离为独立中间件层，让框架专注 IO 调度，可获得数量级的性能提升。
+
 ---
 
 ## 核心特性
@@ -306,9 +316,26 @@ tests/.venv/bin/python3 tests/seed_data.py \
 ### 静态文件压测
 
 ```bash
-# S: 低并发（4C8G 模拟）| M: 中等（8C16G）| L: 高并发（16C32G）| LOCAL_MAX: 自动适配
-bash tests/bench_static.sh . M
-# 输出: tests/benchmarks/bench_profile_M_latest.md
+# 多配置探索（M1-M5）
+bash tests/bench.sh static M
+
+# 梯度加压（逐步增加并发找到上限）
+bash tests/bench.sh static GRADIENT
+
+# 自定义每档时长（默认 12 秒）
+bash tests/bench.sh static GRADIENT 8
+
+# 输出: tests/benchmarks/bench_YYYYMMDD_HHMMSS.md
+```
+
+### Echo 基准压测
+
+```bash
+# 梯度加压（固定 12 线程，逐步增加并发）
+bash tests/bench.sh echo ECHO
+
+# 线程梯度（固定 500 并发，逐步增加服务器线程）
+bash tests/bench.sh echo ECHO_THREADS
 ```
 
 ### SQL 查询压测
@@ -321,14 +348,15 @@ bash tests/bench_sql.sh . S
 
 ### 压测档位说明
 
-#### bench_static.sh PROFILE
+#### bench.sh static M PROFILE
 
-| 档位 | 适用场景 | 说明 |
-|------|---------|------|
-| S | 4C8G | 3 组用例，低并发 |
-| M | 8C16G | 4 组用例，中等并发 |
-| L | 16C32G | 4 组用例，高并发 |
-| LOCAL_MAX | 自动适配 | 按当前机器核数自适配 |
+| 用例 | dispatcher | io_threads | 连接模式 | wrk 参数 | 说明 |
+|------|-----------|-----------|---------|---------|------|
+| M1 | epoll | 8 | keepalive | 8 线程 / 300 连接 | |
+| M2 | epoll | 12 | keepalive | 12 线程 / 500 连接 | |
+| M3 | epoll | 16 | keepalive | 16 线程 / 800 连接 | |
+| M4 | epoll | 12 | close | 12 线程 / 500 连接 | 短连接模式 |
+| M5 | poll | 12 | keepalive | 12 线程 / 500 连接 | 对比 poll 后端 |
 
 #### bench_sql.sh PROFILE
 
@@ -406,7 +434,7 @@ CPPReactor/
 │   ├── seed_data.py              # 数据注入脚本
 │   ├── test_smoke.sh             # 冒烟测试
 │   ├── run_http_cases.py         # HTTP 边界测试
-│   ├── bench_static.sh           # 静态文件压测
+│   ├── bench.sh                  # 统一压测脚本（静态文件 + Echo 基准）
 │   ├── bench_sql.sh              # SQL 压测
 │   ├── benchmarks/               # 压测输出（gitignore）
 │   └── bench_reports/            # 历史报告（gitignore）
@@ -433,26 +461,92 @@ CPPReactor/
 
 ## 压测报告摘要
 
-以下为项目在 **WSL2 (i7-13700H, 20 核, 15GiB 内存)** 环境下的压测数据摘要。完整报告见 [tests/BENCHMARK_REPORT.md](tests/BENCHMARK_REPORT.md)。
+以下为项目在 **WSL2 (i7-13700H, 20 核, 15GiB 内存)** 环境下的压测数据摘要，编译优化 `-O2`。完整报告见 [tests/BENCHMARK_REPORT.md](tests/BENCHMARK_REPORT.md)。
 
-### 静态文件压测
+### Echo 基准压测（框架 IO 吞吐上限）
 
-| 模式 | QPS | 平均延迟 | 说明 |
-|------|-----|---------|------|
-| epoll 4 线程 keepalive | 7,669 | 15.83ms | 低延迟最佳 |
-| epoll 6 线程 close | **10,143** | 23.64ms | **最高 QPS** |
-| poll 6 线程 keepalive | 9,252 | 21.59ms | poll 性能接近 epoll |
-| epoll 6 线程 keepalive | 7,906 | 30.45ms | keepalive 模式 |
+服务器不做 HTTP 解析，仅 read → discard → write(固定 HTTP 200 空响应)，旨在测量框架的原始 IO 调度能力。使用 wrk 压测。
 
-### SQL 远程查询压测（远程腾讯云 MySQL 5.7）
+| 并发数 | QPS | P50 延迟 |
+|-------|-----|---------|
+| 10 | 180,964 | 39μs |
+| 50 | 520,259 | 69μs |
+| 100 | 633,195 | 100μs |
+| 200 | **1,336,849** | 151μs |
+| 800 | **1,781,742** | 803μs |
+| 1000 | 1,626,674 | 1.50ms |
 
-| 查询类型 | QPS | 平均延迟 | 说明 |
-|---------|-----|---------|------|
-| `SELECT count(*)` | 15.25 | 324ms | 轻量聚合查询 |
-| `SELECT * WHERE name=` | 13.58 | 364ms | 索引查询 |
-| `SELECT LIMIT 100` | 17.45 | 562ms | 范围查询 |
+> epoll Reactor 架构在纯 IO 场景下实测可达 **178 万 QPS**，证明框架的 IO 调度能力本身并非瓶颈。
 
-> **瓶颈分析**：QPS 瓶颈在远程数据库网络往返（~300-800ms），服务器本身静态文件 QPS ~10,000，SQL 查询 QPS ~15。
+### 静态文件压测（目录索引）
+
+服务器执行完整 HTTP 解析 + 目录遍历 + 文件排序 + HTML 拼接 + 响应组装，体现真实业务场景。
+
+| 模式 | QPS | 平均延迟 |
+|------|-----|---------|
+| epoll 8 线程 keepalive | 35,593 | 6.32ms |
+| epoll 12 线程 keepalive | 37,116 | 12.95ms |
+| epoll 16 线程 keepalive | 44,120 | 18.16ms |
+| epoll 12 线程 keepalive（梯度 200 并发） | **60,645** | 3.32ms |
+| poll 12 线程 keepalive | 51,537 | 9.63ms |
+
+### SQL 远程查询压测
+
+远程腾讯云 MySQL 5.7（1 核 1GB，公网连接），仅验证 SQL 查询功能链路，**数据不具备性能参考价值**。
+
+| 查询类型 | QPS | 平均延迟 |
+|---------|-----|---------|
+| `SELECT count(*)` | 15.25 | 324ms |
+| `SELECT * WHERE name=` | 13.58 | 364ms |
+| `SELECT LIMIT 100` | 17.45 | 562ms |
+
+> **该数据的限制说明：**
+> - 查询延迟 300-800ms 中，**95% 以上消耗在公网 TCP 往返**，而非数据库或服务器执行
+> - 远程为 1 核基础型 MySQL 实例，单机吞吐上限极低
+> - `SqlExecutor` 单线程串行执行查询，非并行压测设计
+> - 此数据仅用于验证 SQL 查询功能在框架中完整可用，**不代表框架 SQL 处理能力的真实上限**。性能敏感的 SQL 场景应在内网低延迟环境下测试。
+
+---
+
+## 性能分析：框架能力 vs 业务瓶颈
+
+从以上三组数据可以清晰看到：
+
+```
+框架 IO 吞吐（Echo）    1,781,742 QPS  ← 架构能力
+         ↓ 约 29 倍差距
+HTTP 业务处理（静态文件）   60,645 QPS  ← 业务代码开销
+         ↓ 约 3,500 倍差距
+SQL 远程查询                   ~15 QPS  ← 外部服务延迟
+```
+
+**核心结论**：
+
+1. **epoll Reactor 不是瓶颈** — 纯 IO 场景 178 万 QPS 证明架构选型合理
+2. **业务代码是主要开销来源** — HTTP 解析、字符串分配、文件 IO 占据了约 96% 的 CPU 时间
+3. **SQL 性能依赖于外部数据库** — 框架本身的调度效率在 SQL 场景中几乎不体现
+
+### 中间件架构展望
+
+目前所有业务逻辑（HTTP 解析、路由、静态文件处理、SQL 查询）全部在框架内部完成，这与高性能服务器的最佳实践——**专注 IO，业务外置**——相悖。后续演进方向：
+
+```
+当前架构                   改进方向
+┌──────────────┐          ┌──────────────┐
+│  CPPReactor  │          │  CPPReactor  │  ← 专注：TCP 管理、TLS、协议帧
+│  + HTTP 解析 │          │  (IO 调度层)  │     epoll 调度、连接池
+│  + 路由分发  │    →     ├──────────────┤
+│  + 静态文件  │          │  业务中间件    │  ← 可插拔：HTTP 解析、路由、限流
+│  + SQL 查询  │          ├──────────────┤
+│  + 业务逻辑  │          │  后端服务      │  ← 独立：文件服务、SQL 引擎、API
+└──────────────┘          └──────────────┘
+```
+
+将 HTTP 协议解析、请求路由、业务处理等剥离为独立的中间件层后，框架可专注于 IO 调度，同时获得：
+- **业务模块热更新**：中间件独立进程，重启不影响框架
+- **语言无关**：中间件可用任意语言实现，通过 RPC 或共享内存通信
+- **独立扩缩容**：IO 层和后端可独立调整线程数
+- **性能隔离**：业务代码的 OOM、死循环不拖垮 IO 层
 
 ---
 

@@ -4,6 +4,7 @@
 *.log
 
 main_run
+main_echo
 build/
 cmake-build-*/
 compile_commands.json

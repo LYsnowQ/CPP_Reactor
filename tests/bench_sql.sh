@@ -83,7 +83,7 @@ echo "[sql-bench] output=${OUT_MD}"
 # ── 启动服务器 ──
 pkill -f './main_run' >/dev/null 2>&1 || true
 sleep 1
-./main_run "${PORT}" "${ROOT_DIR}" epoll 4 close >/tmp/cppreactor_sqlbench.log 2>&1 &
+./main_run "${PORT}" "${ROOT_DIR}" epoll 12 close >/tmp/cppreactor_sqlbench.log 2>&1 &
 SERVER_PID=$!
 
 # ── 等待服务器端口就绪，超时 5 秒 ──

@@ -36,7 +36,6 @@ namespace reactor::net
             return;
         }
 
-        isStop_.store(false);
         for (size_t i = 0; i < loops_.size(); i++)
         {
             threads_.emplace_back(&IOThreadPool::worker_, this, i);
@@ -58,7 +57,6 @@ namespace reactor::net
             return;
         }
 
-        isStop_.store(true);
         for (auto &loop : loops_)
         {
             if (loop)

@@ -1,18 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <vector>
 #include <cstdint>
 #include <thread>
-#include <cstdint>
-#include <atomic>
-#include <queue>
-#include <future>
-#include <functional>
-#include <condition_variable>
 #include <latch>
 
 #include "core/EventLoop.hpp"
@@ -67,12 +59,7 @@ class IOThreadPool
   private:
     std::vector<std::thread> threads_;
     std::vector<std::unique_ptr<core::EventLoop>> loops_;
-    std::queue<Task> taskQ_;
 
-    std::condition_variable cv_;
-    std::mutex mutex_;
-
-    std::atomic<bool> isStop_{false};
     std::latch latch_;
     uint32_t loopIndex_;
     const uint32_t maxThreads_;

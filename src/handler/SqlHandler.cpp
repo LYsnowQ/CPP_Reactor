@@ -141,10 +141,10 @@ namespace reactor::handler
         result.contentType = "application/json; charset=utf-8";
 
         // 暂时只放行 GET 请求。
-        if(req.getMethed() != "GET")
+        if(req.getMethod() != "GET")
         {
             result.statusCode = 405;
-            result.body = R"({"error":"Method not allowd"})";
+            result.body = R"({"error":"Method not allowed"})";
             return result;
         }
 
