@@ -14,7 +14,7 @@ tests/
 ├── run_http_cases.py                   # HTTP 协议边界测试（合法/非法/超大包/半包）
 │
 ├── bench.sh                            # 统一压测脚本（HTTP 静态文件 + Echo 基准）
-├── bench_sql.sh                        # SQL 查询压测（wrk，多模式 S/M/L/ALL）
+├── bench_sql.sh                        # SQL 连接测试（wrk，多模式 S/M/L/ALL）
 │
 ├── benchmarks/                         # 压测输出目录（已 gitignore）
 └── bench_reports/                      # 历史报告存档（已 gitignore）
@@ -41,7 +41,7 @@ bash tests/bench.sh static M
 # 6. Echo 基准压测
 bash tests/bench.sh echo ECHO
 
-# 7. SQL 压测（需要已连接 MySQL + 已注入数据）
+# 7. SQL 连接测试（需已连接 MySQL + 已注入数据）
 bash tests/bench_sql.sh . S
 
 # 8. 数据注入（首次需要）
@@ -70,7 +70,7 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 | 文件 | 工具 | 用途 |
 |------|------|------|
 | `bench.sh` | wrk | 统一压测入口。支持 `static`（HTTP 目录索引）和 `echo`（无业务 IO 基准）两种模式，梯度加压或固定配置探索，输出 Markdown 到 `benchmarks/` |
-| `bench_sql.sh` | wrk | SQL 查询压测，多模式覆盖轻量/中等/重度查询，输出 Markdown |
+| `bench_sql.sh` | wrk | SQL 连接测试（功能链路验证，非性能基准），多模式覆盖轻量/中等/重度查询，输出 Markdown |
 
 ### 输出目录
 
@@ -109,7 +109,7 @@ bash tests/bench.sh static GRADIENT 8
 | M4 | epoll | 12 | close | 12 线程 / 500 连接 |
 | M5 | poll | 12 | keepalive | 12 线程 / 500 连接 |
 
-### bench_sql.sh 配置
+### bench_sql.sh 配置（连接测试，非性能基准）
 
 | 档位 | 并发范围 | 说明 |
 |------|---------|------|
