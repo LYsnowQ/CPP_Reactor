@@ -208,7 +208,9 @@ SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（
 - 没有认证、授权、限流、TLS；
 - 结论：只在本机或隔离网络中使用，**不要暴露到公网**。
 
-这些问题已逐条登记在 [BACKLOG](./docs/plan/BACKLOG.md) 的 B-01、B-02。
+这些问题已逐条登记在 [BACKLOG](./docs/plan/BACKLOG.md) 的 B-01、B-02，
+对应 issue [#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1)、
+[#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)。
 
 ---
 

@@ -6,6 +6,12 @@
 >
 > 最后更新：2026-11-06。已修复项见
 > [本次变更记录](../changes/2026-11-06-docs-normalization.md)。
+>
+> p0/p1 已建远端 issue：[#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1)、
+> [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)、
+> [#3](https://github.com/LYsnowQ/CPP_Reactor/issues/3)、
+> [#4](https://github.com/LYsnowQ/CPP_Reactor/issues/4)。
+> p2/p3 暂保留在本文件，需要时再建单。
 
 ## 总览
 
@@ -28,7 +34,7 @@
 
 ## B-01
 
-**`/sql` 执行任意 SQL，`readOnly` 未生效** · p0 · security/sql
+**`/sql` 执行任意 SQL，`readOnly` 未生效** · p0 · security/sql · [#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1)
 
 - 证据：`src/handler/SqlHandler.cpp:143-157` 只校验 GET；`src/persistence/SqlConfig.cpp:182`
   解析 `readOnly`，全仓库无任何强制执行点。
@@ -41,7 +47,7 @@
 
 ## B-02
 
-**静态根目录可下载 `config/SQLConfig.json`** · p0 · security/http
+**静态根目录可下载 `config/SQLConfig.json`** · p0 · security/http · [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)
 
 - 证据：以仓库根启动后 `curl /config/SQLConfig.json` 返回 200（2026-11-06 实测）。
 - 影响：一旦填入真实数据库密码，密码可被任意下载；源码、`third_party/` 同样可下载。
@@ -51,7 +57,7 @@
 
 ## B-03
 
-**数据库连接失败时 `/sql` 永久挂起** · p1 · sql/net
+**数据库连接失败时 `/sql` 永久挂起** · p1 · sql/net · [#3](https://github.com/LYsnowQ/CPP_Reactor/issues/3)
 
 - 证据：`SqlExecutor::run_()` 捕获异常仅 `spdlog::warn`，不回调连接；模板配置下实测
   `curl --max-time 8` 超时，日志出现 `SqlExecutor job failed: sql connect failed`。
@@ -62,7 +68,7 @@
 
 ## B-04
 
-**`SQLConfig` 多数字段未生效，启动校验未接线** · p1 · sql/config
+**`SQLConfig` 多数字段未生效，启动校验未接线** · p1 · sql/config · [#4](https://github.com/LYsnowQ/CPP_Reactor/issues/4)
 
 - 证据：`src/app/main.cpp:72-85` 使用通用 loader 并传入 `ThreadLocalConnOptions{}`；
   `loadSqlConfigFromFileOrThrow()` 与 `validate()` 从未被调用。未生效字段：

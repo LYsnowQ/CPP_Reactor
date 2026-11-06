@@ -219,7 +219,8 @@
   且无法还原当时的验收条件。
 - **从下一次非平凡改动开始 issue-first**：BACKLOG 的 12 条已按 issue 结构写好，可直接创建。
 - 纯文档、typo、发版提交不强制 issue。
-- 远端 issue 的创建/关闭需要所有者确认——本次**未**在 GitHub 创建任何 issue。
+- 所有者已确认；本次为 p0/p1 创建了 [#1–#4](https://github.com/LYsnowQ/CPP_Reactor/issues)，
+  p2/p3 仍在 BACKLOG，暂不建单。
 
 ### 7.3 门禁（必须通过）
 
@@ -286,6 +287,7 @@ B-10 自动基准、B-11 参数校验、B-12 `--help/--version`。
 - [x] HTTP 用例 4/4 通过；
 - [x] 版本有 tag + CHANGELOG + CMake VERSION 三处一致；
 - [x] 已知问题有 ID、证据、验收条件；
+- [x] p0/p1 已建远端 issue（#1–#4）；
 - [x] CI 覆盖编译、冒烟、HTTP 用例、文档检查；
 - [ ] 真实 MySQL 链路验证（需本机数据库，未执行）；
 - [ ] 远端 CI 首跑（需推送后确认）。

@@ -4,7 +4,7 @@
 - 关联：[审计报告](../reviews/2026-11-06-NORMALIZATION-AUDIT.md)、
   [BACKLOG](../plan/BACKLOG.md)
 - 基线：`main` @ `483b7b1`（v1.2.0）
-- 版本 tag 与远端 issue 均未创建；分支推送状态以远端为准
+- 版本 tag 未创建；p0/p1 已建 issue #1–#4；分支已推送
 
 ## 目的
 
@@ -49,7 +49,7 @@
 - 不修数据库失败挂起（见 B-03）；
 - 不补单元测试（见 B-09）；
 - 不改写历史迭代文档中的 `file:///` 链接与失效路径；
-- 不创建远端 issue、不推送 tag。
+- 不推送 tag；p0/p1 已建 issue（#1–#4），p2/p3 保留在 BACKLOG。
 
 ## 验证
 
