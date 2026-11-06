@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 安装工具
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends make g++ curl python3
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 安装工具
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake g++ make

@@ -15,9 +15,10 @@
 - 不设 `stage`/`release` 分支：单人项目没有预发布环境。
 - **所有会改变行为、构建、配置或文档结构的改动必须走 PR**（issue → 分支 → PR → squash → 删除分支）。
 - **可以直接提交 `main` 的例外**：typo、单篇文档修正、`chore(release)` 发布提交；仍需本地验证。
+  分支保护开启后，这类提交需要管理员绕过，能走 PR 就走 PR。
 - 任何操作前先 `git status` 与 `git branch --show-current`，确认自己在哪。
-- `main` 应开启分支保护：require PR、require CI、linear history、禁止 force push
-  （见 issue #17）；保护生效前靠人工遵守。
+- `main` 已启用分支保护：require PR、required checks（两个 CI job）、linear history、
+  禁止 force push/删除；`enforce_admins=false` 保留所有者应急绕过。
 - 禁止对 `main` 强推、禁止改写已推送历史、禁止删除已发布 tag。
 
 ## 2. 提交信息

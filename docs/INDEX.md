@@ -76,6 +76,7 @@
 | [2026-11-06 发布 2.0.0](changes/2026-11-06-release-2.0.0.md) | 版本号、Breaking Changes、tag 与 Release |
 | [2026-11-06 英文文档](changes/2026-11-06-english-docs.md) | 英文 README / 许可摘要与中英文互链 |
 | [2026-11-06 根目录整理](changes/2026-11-06-repo-layout.md) | 法律/历史材料分层，根目录只保留标准入口 |
+| [2026-11-06 CI 治理](changes/2026-11-06-ci-governance.md) | checkout 升级、main 分支保护与必需检查 |
 
 ## history/ — 历史材料（只读）
 
