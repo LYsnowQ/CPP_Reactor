@@ -9,6 +9,7 @@
 ### Security
 
 - `/sql` 与 `/query` 默认不注册，必须显式追加 `--enable-sql` 才开启（#1）。
+- 静态文件服务拒绝根目录下的 `config/`、`.git/` 与任意点文件，目录索引也不再列出它们（#2）。
 - `readOnly: true` 时启用 HTTP 层只读护栏：仅允许单条 `SELECT` / `SHOW` / `DESCRIBE` /
   `EXPLAIN`，写语句、多语句、注释开头一律 403；`readOnly: false` 显式允许任意 SQL 并输出警告。
 

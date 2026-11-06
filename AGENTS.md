@@ -57,7 +57,7 @@
 | 以为 `--enable-sql` 就等于安全 | `readOnly` 只提供启发式语句护栏，仍需只读数据库账号与网络隔离 |
 | 以为 `/sql` 出错会返回 500 | 数据库连接失败会挂起；见 BACKLOG B-03 |
 | 以为 CMake 与 Make 等价 | CMake 的 `main_echo` 曾漏链 MySQL 库（已修）；改构建时两边都验证 |
-| 以为静态根只服务静态文件 | 它会把整个目录暴露为可下载文件，包括 `config/` |
+| 以为静态根只服务静态文件 | `config/`/`.git`/点文件已拒绝，但其他源码与文档仍可下载 |
 | 直接改历史迭代文档 | 历史材料不改写；新结论写进 `docs/reviews/` 或 `docs/architecture/` |
 
 ## 6. 记录写在哪里
@@ -74,7 +74,7 @@
 ## 7. 完成检查
 
 - [ ] `make` 零错误零警告；
-- [ ] 冒烟 + 5 个 HTTP 用例 + SQL 安全用例通过；
+- [ ] 冒烟 + 9 个 HTTP 用例 + SQL 安全用例通过；
 - [ ] `python3 scripts/check_docs.py` 通过；
 - [ ] 受影响的 README / architecture 文档已更新；
 - [ ] CHANGELOG 已补；

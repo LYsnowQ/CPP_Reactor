@@ -3,6 +3,7 @@
 #include "utils/StringUtils.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <string_view>
@@ -117,6 +118,49 @@ namespace
     }
 
     // ====================================================================
+    // 敏感路径策略
+    // ====================================================================
+    //
+    // 静态根可能直接指向仓库根目录。此时 config/ 内有数据库配置，
+    // .git/ 与以 '.' 开头的文件也不应通过 HTTP 暴露。
+    // 这里按“根目录下的相对路径”判断，避免用字符串包含造成误伤：
+    //   - 第一段为 config（大小写不敏感）→ 拒绝；
+    //   - 任意一段以 '.' 开头 → 拒绝（.git、.env、.gitignore 等）。
+    // 根目录自身（relative == "."）不受影响。
+    bool isDeniedByPolicy_(const std::filesystem::path &root, const std::filesystem::path &target)
+    {
+        std::error_code ec;
+        const auto relative = std::filesystem::relative(target, root, ec);
+        if (ec)
+        {
+            return true;
+        }
+        if (relative.empty() || relative == ".")
+        {
+            return false;
+        }
+
+        auto it = relative.begin();
+        std::string first = it->string();
+        std::transform(first.begin(), first.end(), first.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (first == "config")
+        {
+            return true;
+        }
+
+        for (const auto &part : relative)
+        {
+            const auto name = part.string();
+            if (!name.empty() && name.front() == '.')
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ====================================================================
     // URL 规范化
     // ====================================================================
     //
@@ -158,6 +202,10 @@ namespace
         std::vector<std::filesystem::directory_entry> entries;
         for (const auto &entry : std::filesystem::directory_iterator(dirPath))
         {
+            if (isDeniedByPolicy_(root, entry.path()))
+            {
+                continue;
+            }
             entries.push_back(entry);
         }
         // 目录在前，文件在后，各自按文件名字母排序。
@@ -285,6 +333,14 @@ reactor::handler::StaticFileHandler::handle(
         result.statusCode = 403;
         result.reasonPhrase = "Forbidden";
         result.body = "Path is outside of static root.\n";
+        return result;
+    }
+    // 敏感路径：config/、.git/、隐藏文件不通过静态服务暴露。
+    if (isDeniedByPolicy_(root_, candidate))
+    {
+        result.statusCode = 403;
+        result.reasonPhrase = "Forbidden";
+        result.body = "Path is not allowed.\n";
         return result;
     }
 

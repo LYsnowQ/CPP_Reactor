@@ -22,6 +22,10 @@
 cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 ```
 
+> 静态文件服务会拒绝根目录下的 `config/`、`.git/` 与点文件（issue #2），因此把仓库根作为
+> `resource_path` 不会再泄露数据库配置；但源码、README、`docs/` 仍会被提供下载。
+> 要限制公开范围，请把专用目录作为 `resource_path`。
+
 ## 2. 命令行参数
 
 ```bash

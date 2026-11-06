@@ -69,9 +69,10 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 | `test_sql_security.sh` | curl | 验证 SQL 端点默认关闭、只读护栏（写语句 403）、参数缺失 400 |
 | `seed_data.py` | pymysql | 向 MySQL users 表插入 5 万行测试数据 |
 
-> `run_http_cases.py` 当前覆盖 5 条路径：合法 GET、非法请求行、超 1 MB 体积（413）、
-> SQL 端点默认关闭（404）、`Content-Length` 分片 Body。Keep-Alive 超时、408、403、405、
-> SQL 错误路径尚未覆盖，见 [BACKLOG B-09](../docs/plan/BACKLOG.md)。
+> `run_http_cases.py` 当前覆盖 9 条路径：合法 GET、非法请求行、目录索引隐藏敏感条目、
+> 超 1 MB 体积（413）、SQL 端点默认关闭（404）、`config/`/`.git`/点文件拒绝（403）、
+> `Content-Length` 分片 Body。Keep-Alive 超时、408、405、SQL 错误路径尚未覆盖，
+> 见 [BACKLOG B-09](../docs/plan/BACKLOG.md)。
 >
 > 服务端返回 413 后可能立即关闭连接，客户端会先收到 RST；用例会保留 RST 之前已读到的字节。
 

@@ -8,7 +8,11 @@ from typing import Tuple, List
 def send_raw(host: str, port: int, payload: bytes, timeout: float = 3.0) -> bytes:
     with socket.create_connection((host, port), timeout=timeout) as sock:
         sock.settimeout(timeout)
-        sock.sendall(payload)
+        try:
+            sock.sendall(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            # 服务端可能在客户端发完前就回 413 并关闭；继续尝试读取已写出的响应。
+            pass
         chunks: List[bytes] = []
         while True:
             try:
@@ -76,6 +80,17 @@ def run(host: str, port: int) -> int:
             "expect": 400,
         },
         {
+            # 根目录列表不应出现 config/ 与 .git/ 等敏感条目。
+            "name": "directory_index_hides_denied",
+            "run": lambda: send_raw(
+                host,
+                port,
+                b"GET / HTTP/1.1\r\nHost: local\r\n\r\n",
+            ),
+            "expect": 200,
+            "absent": [b'href="/config/"', b'href="/.git/"', b".gitignore"],
+        },
+        {
             "name": "payload_too_large",
             "run": lambda: send_raw(
                 host,
@@ -99,6 +114,34 @@ def run(host: str, port: int) -> int:
             "expect": 404,
         },
         {
+            # 静态根即使指向仓库根，也不能下载数据库配置。
+            "name": "config_download_blocked",
+            "run": lambda: send_raw(
+                host,
+                port,
+                b"GET /config/SQLConfig.json HTTP/1.1\r\nHost: local\r\n\r\n",
+            ),
+            "expect": 403,
+        },
+        {
+            "name": "git_metadata_blocked",
+            "run": lambda: send_raw(
+                host,
+                port,
+                b"GET /.git/config HTTP/1.1\r\nHost: local\r\n\r\n",
+            ),
+            "expect": 403,
+        },
+        {
+            "name": "dotfile_blocked",
+            "run": lambda: send_raw(
+                host,
+                port,
+                b"GET /.gitignore HTTP/1.1\r\nHost: local\r\n\r\n",
+            ),
+            "expect": 403,
+        },
+        {
             # GET 带请求体同样走增量解析；用 "/"（目录索引）验证分片 body
             # 解析完成后仍能正常分派并返回 200。
             "name": "split_content_length_body",
@@ -117,6 +160,8 @@ def run(host: str, port: int) -> int:
         try:
             resp = case["run"]()
             ok = contains_status(resp, case["expect"])
+            if ok and "absent" in case:
+                ok = all(needle not in resp for needle in case["absent"])
             line = status_line(resp)
             if ok:
                 print(f"[PASS] {case['name']} -> {line}")

@@ -215,13 +215,14 @@ SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（
 - `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`，
   写语句返回 403；这是 HTTP 层的启发式护栏，不是完整 SQL 解析器；
 - `readOnly: false` 会允许任意 SQL，只应在完全可信的本机环境使用；
-- 以仓库根目录作为静态根时，`config/SQLConfig.json` 会被当作普通文件提供下载——
-  填入真实数据库密码即等于公开密码（见 issue [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)）；
+- 静态文件服务拒绝根目录下的 `config/`、`.git/` 与任意以 `.` 开头的路径（issue
+  [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)），但根目录中的源码/文档仍可被读取，
+  建议用独立的 `public/` 目录作为静态根；
 - 没有认证、授权、限流、TLS；
 - 结论：只在本机或隔离网络中使用，**不要暴露到公网**。
 
-只读护栏已随 [#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1) 实现；配置泄露仍在
-[BACKLOG B-02](./docs/plan/BACKLOG.md) 跟踪。
+配置泄露与只读护栏分别由 [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)、
+[#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1) 处理。
 
 ---
 
