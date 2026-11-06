@@ -4,7 +4,14 @@
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。规则见
 [docs/conventions/VERSIONING.md](./docs/conventions/VERSIONING.md)。
 
-## [Unreleased]
+## [2.0.0] - 2026-11-06
+
+### Breaking Changes
+
+- `/query`、`/sql` 默认不注册，必须追加 `--enable-sql`；未开启时返回 404。
+- `SQLConfig` 移除从未生效的 `driver`/`connMode`/`reconnect*`/`initSqls`/`slowQueryMs`/
+  `enableSqlLog`；启用 SQL 时启动校验失败会直接退出。
+- 许可证从 MIT 改为 PolyForm Noncommercial 1.0.0；历史版本（≤ `be3bc0b` / v1.2.0）仍为 MIT。
 
 ### Security
 
@@ -61,6 +68,7 @@
 - 新增 [许可变更记录](./docs/changes/2026-11-06-license-change.md) 与 ADR-0004。
 - 新增 [管理转型记录](./docs/changes/2026-11-06-management-transition.md)：GitHub Issues 成为唯一
   待办主档，非平凡改动走 PR；BACKLOG 只保留迁移说明。
+- 新增 [2.0.0 发布记录](./docs/changes/2026-11-06-release-2.0.0.md)。
 
 ## [1.2.0] - 2026-06-19
 
@@ -149,7 +157,8 @@
 > 0.11.0–0.14.0 没有留下记录，无法可靠回溯。原始流水见
 > [docs/history/PROJECT-LOG.md](./docs/history/PROJECT-LOG.md)。
 
-[Unreleased]: https://github.com/LYsnowQ/CPP_Reactor/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/LYsnowQ/CPP_Reactor/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/LYsnowQ/CPP_Reactor/releases/tag/v2.0.0
 [1.2.0]: https://github.com/LYsnowQ/CPP_Reactor/releases/tag/v1.2.0
 [1.1.0]: https://github.com/LYsnowQ/CPP_Reactor/releases/tag/v1.1.0
 [1.0.0]: https://github.com/LYsnowQ/CPP_Reactor/releases/tag/v1.0.0

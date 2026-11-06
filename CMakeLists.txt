@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(CPPReactor VERSION 1.2.0 LANGUAGES CXX)
+project(CPPReactor VERSION 2.0.0 LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # 未显式指定构建类型时使用 Release，与 Makefile 的 -O2 保持同一量级。
