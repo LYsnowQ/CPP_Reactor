@@ -215,8 +215,9 @@ SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（
 ### 安全边界
 
 - `/sql` 默认关闭；追加 `--enable-sql` 才会注册，且仍**没有鉴权**；
-- `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`，
-  写语句返回 403；这是 HTTP 层的启发式护栏，不是完整 SQL 解析器；
+- `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`；
+  写语句、多语句、注释序列，以及 `INTO OUTFILE`、`FOR UPDATE`、`LOAD_FILE()`、`SLEEP()`
+  等危险 SELECT 形式返回 403；这是 HTTP 层的启发式护栏，不是完整 SQL 解析器；
 - `readOnly: false` 会允许任意 SQL，只应在完全可信的本机环境使用；
 - 静态文件服务拒绝根目录下的 `config/`、`.git/` 与任意以 `.` 开头的路径（issue
   [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)），但根目录中的源码/文档仍可被读取，

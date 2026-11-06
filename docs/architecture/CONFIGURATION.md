@@ -65,7 +65,7 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 | `pingBeforeUse` | bool | `true` | `false` | ✅ | 传入 `ThreadLocalConnOptions` |
 | `maxConnLifetimeMs` | int | `1800000` | `0` | ✅ | 传入 `ThreadLocalConnOptions` |
 | `maxConnIdleMs` | int | `60000` | `0` | ✅ | 传入 `ThreadLocalConnOptions`，且必须 ≤ lifetime |
-| `readOnly` | bool | `true` | `false` | ✅ | HTTP 只读护栏：`true` 仅允许单条 SELECT/SHOW/DESCRIBE/EXPLAIN |
+| `readOnly` | bool | `true` | `false` | ✅ | HTTP 只读护栏：仅允许单条 SELECT/SHOW/DESCRIBE/EXPLAIN；拒绝写语句、注释与危险 SELECT 形式 |
 
 历史字段 `driver`、`connMode`、`reconnectMaxAttempts`、`reconnectBackoffMs`、`initSqls`、
 `slowQueryMs`、`enableSqlLog` 从未真正生效，已从模型与模板中移除。旧配置文件里的这些键

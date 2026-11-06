@@ -61,7 +61,10 @@ GET /query?sql=<percent-encoded SQL>
 - `sql` 值先做 URL 解码；参数名必须为 `sql`，其他参数忽略。
 - `readOnly: true`（模板默认）时，非只读语句返回 403：
   `{"error":"Only read-only statements are allowed"}`。允许的单条语句：
-  `SELECT`、`SHOW`、`DESCRIBE`、`DESC`、`EXPLAIN`；多语句、注释开头、其他写语句一律拒绝。
+  `SELECT`、`SHOW`、`DESCRIBE`、`DESC`、`EXPLAIN`。
+  多语句、任何注释序列、其他写语句，以及会写文件/加锁/读文件/占用连接的 SELECT 形式
+  （`INTO OUTFILE`、`INTO DUMPFILE`、`FOR UPDATE`、`FOR SHARE`、`LOCK IN SHARE MODE`、
+  `LOAD_FILE()`、`SLEEP()`、`BENCHMARK()`、`GET_LOCK()`、`RELEASE_LOCK()`）一律 403。
 - 请求在 SQL 工作线程执行，HTTP 连接保持挂起直到结果回写。
 
 ### 成功响应
@@ -120,7 +123,7 @@ Content-Type: application/json; charset=utf-8
 |------|------|------|
 | 任意 SQL 执行 | `/sql` 默认不注册；开启后 `readOnly=true` 只允许只读单语句 | 保持默认关闭；不要设置 `readOnly=false` 后暴露服务 |
 | 凭据泄露 | 静态根可下载 `config/SQLConfig.json`（B-02 未修） | 填真实凭据时不要把仓库根作为静态根 |
-| 只读护栏 | HTTP 层启发式（首关键字、单语句、拒绝注释） | 仍应使用数据库只读账号，护栏不是完整解析器 |
+| 只读护栏 | HTTP 层启发式（首关键字、单语句、拒绝注释、危险 SELECT 形式） | 仍应使用数据库只读账号，护栏不是完整解析器 |
 | 错误信息泄露 | SQL 500 返回驱动原始错误 | 仅本机 |
 | 无 TLS / 无速率限制 | — | 不接公网 |
 

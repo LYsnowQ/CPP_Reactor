@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+### Security
+
+- 只读 SQL 护栏加固（#14）：拒绝 `INTO OUTFILE` / `INTO DUMPFILE`、`FOR UPDATE` /
+  `FOR SHARE` / `LOCK IN SHARE MODE`、`LOAD_FILE()`、`SLEEP()`、`BENCHMARK()`、
+  `GET_LOCK()` / `RELEASE_LOCK()`，以及任何注释序列。
+
 ### Docs
 
 - 新增英文 [README.en.md](./README.en.md) 与

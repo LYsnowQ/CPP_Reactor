@@ -226,8 +226,9 @@ and examples: [docs/architecture/HTTP-API.md](./docs/architecture/HTTP-API.md).
 
 - `/sql` is disabled by default; `--enable-sql` registers it, and it still has **no auth**;
 - with `readOnly: true` (template default), only a single
-  `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN` is allowed; writes return 403.
-  This is a heuristic HTTP-layer guard, not a complete SQL parser;
+  `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN` is allowed; writes, multiple statements, comments,
+  and dangerous SELECT forms (`INTO OUTFILE`, `FOR UPDATE`, `LOAD_FILE()`, `SLEEP()`, etc.)
+  return 403. This is a heuristic HTTP-layer guard, not a complete SQL parser;
 - `readOnly: false` allows arbitrary SQL and should only be used on a fully trusted host;
 - the static handler rejects `config/`, `.git`, and any dot-path under the root
   (issue [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)), but other source and docs

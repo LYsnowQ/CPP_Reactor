@@ -47,8 +47,10 @@ namespace reactor::utils
             return false;
         }
 
-        // 注释可以隐藏首个关键字，直接拒绝。
-        if (sql.rfind("--", 0) == 0 || sql.rfind("#", 0) == 0 || sql.rfind("/*", 0) == 0)
+        // 注释可以隐藏关键字（如 INTO/**/OUTFILE），直接拒绝任何注释序列。
+        if (sql.find("--") != std::string_view::npos ||
+            sql.find('#') != std::string_view::npos ||
+            sql.find("/*") != std::string_view::npos)
         {
             return false;
         }
@@ -68,7 +70,47 @@ namespace reactor::utils
         std::transform(keyword.begin(), keyword.end(), keyword.begin(),
                        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
 
-        return keyword == "SELECT" || keyword == "SHOW" || keyword == "DESCRIBE" ||
-               keyword == "DESC" || keyword == "EXPLAIN";
+        if (keyword != "SELECT" && keyword != "SHOW" && keyword != "DESCRIBE" &&
+            keyword != "DESC" && keyword != "EXPLAIN")
+        {
+            return false;
+        }
+
+        // 去掉空白后做大小写不敏感的危险模式匹配，避免 INTO\nOUTFILE、
+        // LOAD_FILE ( ... ) 这类写法绕过。
+        std::string compact;
+        compact.reserve(sql.size());
+        for (char c : sql)
+        {
+            const auto uc = static_cast<unsigned char>(c);
+            if (std::isspace(uc) != 0)
+            {
+                continue;
+            }
+            compact.push_back(static_cast<char>(std::toupper(uc)));
+        }
+
+        static constexpr std::string_view kForbiddenTokens[] = {
+            "INTOOUTFILE",     // 写服务器文件
+            "INTODUMPFILE",    // 写服务器文件
+            "FORUPDATE",       // 行锁
+            "FORSHARE",        // 行锁（MySQL 8 的 LOCK IN SHARE MODE 同义）
+            "LOCKINSHAREMODE", // 行锁
+            "LOAD_FILE(",       // 读服务器文件
+            "SLEEP(",          // 占用连接
+            "BENCHMARK(",      // 占用 CPU/连接
+            "GET_LOCK(",       // 命名锁
+            "RELEASE_LOCK(",   // 命名锁
+        };
+
+        for (const auto token : kForbiddenTokens)
+        {
+            if (compact.find(token) != std::string::npos)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 } // namespace reactor::utils

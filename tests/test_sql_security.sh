@@ -82,6 +82,16 @@ check_sql "write_drop"        "DROP TABLE users" 403
 check_sql "write_update"      "update users set name='x'" 403
 check_sql "multi_statement"   "SELECT 1; DROP TABLE users" 403
 check_sql "comment_prefix"    "/* x */ DROP TABLE users" 403
+# 危险 SELECT 形式：写文件、加锁、读文件、占用连接。
+check_sql "into_outfile"      "SELECT 1 INTO OUTFILE '/tmp/x'" 403
+check_sql "into_dumpfile"     "SELECT 1 INTO DUMPFILE '/tmp/x'" 403
+check_sql "for_update"        "SELECT * FROM users FOR UPDATE" 403
+check_sql "lock_in_share"     "SELECT * FROM users LOCK IN SHARE MODE" 403
+check_sql "load_file"         "SELECT LOAD_FILE('/etc/passwd')" 403
+check_sql "sleep"             "SELECT SLEEP(1)" 403
+check_sql "benchmark"         "SELECT BENCHMARK(1000000, MD5('x'))" 403
+check_sql "get_lock"          "SELECT GET_LOCK('x', 1)" 403
+check_sql "comment_inside"    "SELECT 1 /*x*/ INTO OUTFILE '/tmp/x'" 403
 # 数据库不可达：必须回 500，不能挂起；连续 3 次验证工作线程未卡死。
 check_sql "select_db_down_1"  "SELECT 1" 500
 check_sql "select_db_down_2"  "SELECT 1" 500
