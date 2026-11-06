@@ -6,7 +6,7 @@
 >
 > - 现行版本记录：[CHANGELOG.md](../../CHANGELOG.md)
 > - 现行架构事实：[docs/architecture/](../architecture/ARCHITECTURE.md)
-> - 逐次迭代记录：[docs/iterations/](../iterations/README.md)
+> - 逐次迭代记录：[docs/history/iterations/](iterations/README.md)
 >
 > 原文件名 `项目日志.md`，2026-11-06 规范化为英文路径并保留原文。
 

@@ -2,7 +2,7 @@
 
 - 类型：docs / legal
 - 关联：[#5](https://github.com/LYsnowQ/CPP_Reactor/issues/5)、
-  [ADR-0004](../decisions/0004-license-noncommercial.md)、[LICENSING.md](../../LICENSING.md)
+  [ADR-0004](../decisions/0004-license-noncommercial.md)、[docs/legal/LICENSING.md](../legal/LICENSING.md)
 - 前一个 MIT 提交：`be3bc0b`
 
 ## 背景
@@ -24,7 +24,7 @@ commit `429dcaf` 以 MIT 收录，用于给 coding agent 提供“参考实现�
 
 - 新代码：PolyForm Noncommercial 1.0.0；
 - 附加许可：允许任何渠道**免费再分发**，不得收费或捆绑付费产品；
-- 历史：截至 `be3bc0b`（含 tag `v1.0.0`–`v1.2.0`）继续 MIT，原文保留在 `LICENSE-MIT`；
+- 历史：截至 `be3bc0b`（含 tag `v1.0.0`–`v1.2.0`）继续 MIT，原文保留在 `LICENSES/MIT.txt`；
 - 明确：MIT 不可撤回，`429dcaf` 仍可被按 MIT 使用。
 
 ## 文件
@@ -32,8 +32,8 @@ commit `429dcaf` 以 MIT 收录，用于给 coding agent 提供“参考实现�
 | 文件 | 变化 |
 |------|------|
 | `LICENSE` | 替换为 PolyForm Noncommercial 1.0.0 + Required Notice |
-| `LICENSE-MIT` | 新增，保存原 MIT 全文 |
-| `LICENSING.md` | 新增，版本边界、允许/禁止用途、附加许可、商业授权 |
+| `LICENSES/MIT.txt` | 新增，保存原 MIT 全文 |
+| `docs/legal/LICENSING.md` | 新增，版本边界、允许/禁止用途、附加许可、商业授权 |
 | `docs/decisions/0004-license-noncommercial.md` | 新增 ADR |
 | `README.md` | 徽章与许可段落改为非商业；说明历史 MIT |
 | `docs/INDEX.md`、`docs/decisions/README.md` | 索引更新 |
@@ -71,7 +71,7 @@ commit `429dcaf` 以 MIT 收录，用于给 coding agent 提供“参考实现�
 
 - `python3 scripts/check_docs.py` 通过；
 - README 不再出现“MIT 开源”的现行声明；
-- `LICENSING.md` 的边界与 tag 一致；
+- `docs/legal/LICENSING.md` 的边界与 tag 一致；
 - 本变更不影响代码与 CI。
 
 ## 注意

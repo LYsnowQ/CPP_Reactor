@@ -15,7 +15,7 @@
 
 | 旧路径 | 新路径 | 说明 |
 |--------|--------|------|
-| `docs/ITERATION_01_*.md` … `_29_*.md` | `docs/iterations/` | 内容不变，保留历史绝对链接 |
+| `docs/ITERATION_01_*.md` … `_29_*.md` | `docs/history/iterations/` | 内容不变，保留历史绝对链接 |
 | `项目日志.md` | `docs/history/PROJECT-LOG.md` | 加历史声明，原文保留 |
 | — | `docs/conventions/` | 6 篇规范 |
 | — | `docs/architecture/` | 架构、配置、HTTP 接口 |

@@ -70,7 +70,7 @@
 | 尚未完成的缺口 | GitHub Issues（`docs/plan/BACKLOG.md` 仅保留迁移说明） |
 | 架构选型 | `docs/decisions/` |
 | 审计/验收证据 | `docs/reviews/` |
-| 历次迭代 | `docs/iterations/`（只读） |
+| 历次迭代 | `docs/history/iterations/`（只读） |
 
 ## 7. 完成检查
 

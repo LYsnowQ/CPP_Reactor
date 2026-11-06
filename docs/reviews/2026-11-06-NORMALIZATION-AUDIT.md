@@ -19,7 +19,7 @@
 | 文档入口 | 根 README + 29 篇迭代 + 1 份日志，无索引 | README + AGENTS + CHANGELOG + docs/INDEX，四层入口 |
 | 规范 | 无 | 6 份强制规范（定位/文档/版本/Git/测试/审查） |
 | 现行事实 | 分散在 README 与迭代文档 | `docs/architecture/` 3 份，标注核对基线 |
-| 历史材料 | 与现行说明混放 | `docs/iterations/`、`docs/history/`，显式“仅供追溯” |
+| 历史材料 | 与现行说明混放 | `docs/history/iterations/`、`docs/history/`，显式“仅供追溯” |
 | 版本记录 | 流水日志，无 tag、无 CHANGELOG | CHANGELOG + 本地 tag（v1.0.0/v1.1.0/v1.2.0） |
 | 问题追踪 | 无 | BACKLOG 12 条（含证据/验收），GitHub issue 模板 |
 | CI | 无 | 编译 + 冒烟 + HTTP 用例 + 文档检查 |
@@ -99,7 +99,7 @@
 
 | ID | 问题 | 证据 | 级别 | 处置 |
 |----|------|------|------|------|
-| A1 | 29 篇迭代与根日志无分类、无索引，现行与历史混放 | `docs/` 目录 | p1 | ✅ 迁移到 `iterations/`、`history/`，新增 INDEX |
+| A1 | 29 篇迭代与根日志无分类、无索引，现行与历史混放 | `docs/` 目录 | p1 | ✅ 迁移到 `history/iterations/`、`history/`，新增 INDEX |
 | A2 | README 目录含“使用 CMake + Conan”，正文无此章节 | `README.md` 旧 21 行 | p1 | ✅ 重写 |
 | A3 | README 项目结构列出已删除的 `conanfile.py` | 旧 454 行；1.1.0 已删除 | p1 | ✅ 重写 |
 | A4 | README 称“27+ 个迭代文档”，实际 29 | 旧 446 行 | p2 | ✅ 重写 |
@@ -171,7 +171,7 @@
 
 ### 文档
 
-- 迁移：`docs/ITERATION_*.md` → `docs/iterations/`（29 篇）；`项目日志.md` →
+- 迁移：`docs/ITERATION_*.md` → `docs/history/iterations/`（29 篇；当时为 `docs/iterations/`）；`项目日志.md` →
   `docs/history/PROJECT-LOG.md`；
 - 新增：`AGENTS.md`、`CHANGELOG.md`、`docs/INDEX.md`、6 篇规范、3 篇架构、3 条 ADR、
   BACKLOG、本审计、变更记录；

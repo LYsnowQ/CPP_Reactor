@@ -8,7 +8,14 @@
 
 ### Docs
 
-- 新增英文 [README.en.md](./README.en.md) 与 [LICENSING.en.md](./LICENSING.en.md)，中英文互链。
+- 新增英文 [README.en.md](./README.en.md) 与
+  [docs/legal/LICENSING.en.md](./docs/legal/LICENSING.en.md)，中英文互链。
+- 新增 [根目录整理记录](./docs/changes/2026-11-06-repo-layout.md)。
+
+### Changed
+
+- 根目录整理：`LICENSING*.md` → `docs/legal/`，`LICENSE-MIT` → `LICENSES/MIT.txt`，
+  `docs/iterations/` → `docs/history/iterations/`。
 
 ## [2.0.0] - 2026-11-06
 
@@ -41,13 +48,13 @@
 
 ### Changed
 
-- 许可证从 MIT 改为 **PolyForm Noncommercial 1.0.0**（#5）：新增 `LICENSING.md` 与
-  `LICENSE-MIT`；历史版本继续 MIT，允许免费再分发，商业使用需单独授权。
-- 文档目录重组：`docs/ITERATION_*.md` → `docs/iterations/`；`项目日志.md` →
+- 许可证从 MIT 改为 **PolyForm Noncommercial 1.0.0**（#5）：新增 `docs/legal/LICENSING.md` 与
+  `LICENSES/MIT.txt`；历史版本继续 MIT，允许免费再分发，商业使用需单独授权。
+- 文档目录重组：`docs/ITERATION_*.md` → `docs/history/iterations/`；`项目日志.md` →
   `docs/history/PROJECT-LOG.md`。
 - 重写 `README.md`：修正过期的 Conan 说明、迭代数量、项目结构，补充安全边界与文档导航。
 - `.clangd` 移除硬编码的 `/project/CPPReactor` 路径，改由 `compile_flags.txt` 提供相对路径。
-- `CMakeLists.txt`：补充 `project(... VERSION 1.2.0)`；默认 `Release`；修复 `main_echo`
+- `CMakeLists.txt`：补充 `project(... VERSION ...)`；默认 `Release`；修复 `main_echo`
   未链接 MySQL 库导致的链接失败；RPATH 改为相对 `$ORIGIN`。
 - `.gitignore` 清理失效的 Conan 条目与重复项；`.dockerignore` 排除文档与测试目录。
 - `docker-compose.yml` 移除无效的 `seed_data.py` 挂载（MySQL 不会执行 `.py`）。

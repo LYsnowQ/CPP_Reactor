@@ -1,4 +1,4 @@
-# iterations/ — 迭代历史
+# history/iterations/ — 迭代历史
 
 > **历史材料，不代表当前实现。** 这些文档记录的是每次迭代“当时”的目标、改动与结论：
 >
@@ -8,12 +8,12 @@
 > - 文档内使用 `file:///project/CPPReactor/...` 这类当时的绝对链接，**保持原样不修改**，
 >   以免破坏历史记录的原始性。
 >
-> 现行事实请看 [docs/architecture/](../architecture/ARCHITECTURE.md)，版本记录看
-> [CHANGELOG.md](../../CHANGELOG.md)。
+> 现行事实请看 [docs/architecture/](../../architecture/ARCHITECTURE.md)，版本记录看
+> [CHANGELOG.md](../../../CHANGELOG.md)。
 
 ## 索引
 
-版本与日期的精确对应以 [PROJECT-LOG.md](../history/PROJECT-LOG.md) 为准；下表只做阶段归类。
+版本与日期的精确对应以 [PROJECT-LOG.md](../PROJECT-LOG.md) 为准；下表只做阶段归类。
 
 | # | 文档 | 主题 | 阶段 |
 |---|------|------|------|
@@ -50,6 +50,6 @@
 ## 使用方式
 
 - 想了解“为什么某处代码长这样”：先看相邻编号的迭代记录，再看
-  [decisions/](../decisions/README.md)；
+  [decisions/](../../decisions/README.md)；
 - 想确认“现在是什么行为”：不要引用这里，改看 `docs/architecture/` 与代码；
 - 发现历史结论与代码不符：在 `docs/reviews/` 记录，不需要回头改写历史文档。

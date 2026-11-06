@@ -5,7 +5,7 @@
 高性能 C++20 Reactor 模式 HTTP 服务器（学习项目）
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
-[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./LICENSING.md)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./docs/legal/LICENSING.md)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-lightgrey.svg)](#环境要求)
 [![CI](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml/badge.svg)](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-2.0.0-informational.svg)](./CHANGELOG.md)
@@ -47,7 +47,8 @@ CPPReactor 从零实现了一个 C++20 的 HTTP/1.1 服务器：主线程 `accep
 静态文件服务、目录索引、健康检查，以及一个基于 MySQL Connector/C++ 的异步 SQL 查询演示端点。
 
 项目当前版本 **2.0.0**（2026-11-06），已走完从 C 风格原型到 C++20 分层的演进，版本记录见
-[CHANGELOG.md](./CHANGELOG.md)，每次迭代的技术记录见 [docs/iterations/](./docs/iterations/README.md)。
+[CHANGELOG.md](./CHANGELOG.md)，每次迭代的技术记录见
+[docs/history/iterations/](./docs/history/iterations/README.md)。
 
 ### 适用范围
 
@@ -304,17 +305,17 @@ CPPReactor/
 ├── third_party/        spdlog、nlohmann_json、mysql-cppconn（自包含）
 ├── config/             SQLConfig.json（空凭据模板）
 ├── tests/              冒烟 / 边界 / 压测 / 数据注入
-├── docs/               规范、架构、决策、迭代、历史、计划、审查
+├── docs/               规范、架构、决策、法律、历史、计划、审查
+│   ├── legal/          许可说明（中英）
+│   └── history/        项目日志与 29 篇历史迭代
+├── LICENSES/           历史 MIT 文本（SPDX 布局）
 ├── scripts/            check_docs.py（文档链接检查）
 ├── .github/            CI、Issue/PR 模板
 ├── AGENTS.md           AI/协作者入口
 ├── README.md           中文 README
 ├── README.en.md        English README
 ├── CHANGELOG.md        版本记录
-├── LICENSING.md        许可边界、附加许可与商业授权
-├── LICENSING.en.md     Licensing summary (English)
 ├── LICENSE             现行许可（PolyForm Noncommercial 1.0.0）
-├── LICENSE-MIT         历史 MIT 原文（截至 be3bc0b）
 ├── CMakeLists.txt / Makefile
 ├── Dockerfile / docker-compose.yml / docker-entrypoint.sh
 ├── compile_flags.txt   clangd 的跨平台编译参数
@@ -346,7 +347,8 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
 | [docs/conventions/](./docs/conventions/README.md) | 强制规范：文档、版本、Git 工作流、测试、审查 |
 | [docs/architecture/](./docs/architecture/ARCHITECTURE.md) | 架构、配置、HTTP 接口 |
 | [docs/decisions/](./docs/decisions/README.md) | 架构决策记录（ADR） |
-| [docs/iterations/](./docs/iterations/README.md) | 29 次迭代的历史记录（仅供追溯） |
+| [docs/legal/](./docs/legal/LICENSING.md) | 许可边界、免费再分发与商业授权 |
+| [docs/history/iterations/](./docs/history/iterations/README.md) | 29 次迭代的历史记录（仅供追溯） |
 | [docs/history/PROJECT-LOG.md](./docs/history/PROJECT-LOG.md) | 原始项目日志（0.1.0–1.2.0） |
 | [docs/plan/BACKLOG.md](./docs/plan/BACKLOG.md) | 已迁移到 GitHub Issues 的说明与迁移记录 |
 | [docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md](./docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md) | 本次文档/配置规范化的审计与方案 |
@@ -364,6 +366,7 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
 - 从 2026-11-06 起的新代码采用 **PolyForm Noncommercial 1.0.0**（非商业、源码可见），
   允许个人学习、非商业研究与**免费再分发**；商业使用需单独授权；
 - 历史版本（截至 `be3bc0b`，含 tag `v1.0.0`–`v1.2.0`）仍为 **MIT**，原文见
-  [LICENSE-MIT](./LICENSE-MIT)；
-- 完整边界、附加许可与商业授权方式见 [LICENSING.md](./LICENSING.md)（[English](./LICENSING.en.md)）；
+  [LICENSES/MIT.txt](./LICENSES/MIT.txt)；
+- 完整边界、附加许可与商业授权方式见 [docs/legal/LICENSING.md](./docs/legal/LICENSING.md)
+  （[English](./docs/legal/LICENSING.en.md)）；
 - MIT 授权不可撤回：已发布的旧代码仍可按 MIT 使用。
