@@ -6,13 +6,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: test
-      MYSQL_USER: user
-      MYSQL_PASSWORD: user
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./tests/seed_data.py:/docker-entrypoint-initdb.d/seed_data.py
+      # 测试数据不在这里注入：MySQL initdb 只执行 .sh/.sql。
+      # 启动后按 tests/README.md 用 seed_data.py 手动注入。
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 5s

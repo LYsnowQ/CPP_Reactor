@@ -1,52 +1,43 @@
-*.exe
-*.o
-*.obj
-*.log
-
-main_run
-main_echo
+# ============================================================
+# 构建产物
+# ============================================================
 build/
+build-*/
 cmake-build-*/
 compile_commands.json
-CMakeUserPresets.json
-CMakePresets.json
-conanbuild.sh
-conanrun.sh
-.conan/
-.conan2/
-.cache/
-third_party/conan/
-third_party/conan_home/
-third_party/deps/
+main_run
+main_echo
+*.o
+*.obj
+*.exe
 
-# Runtime and benchmark outputs
+# ============================================================
+# 运行与压测输出
+# ============================================================
+*.log
 tests/bench_reports/*
 tests/benchmarks/*
 !tests/bench_reports/.gitkeep
 !tests/benchmarks/.gitkeep
 !tests/BENCHMARK_REPORT.md
 
-# Python virtual environment
+# ============================================================
+# Python 虚拟环境与缓存
+# ============================================================
 tests/.venv/
 .venv/
-
-# Python cache and build artifacts
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
-dist/
-build/
 *.egg
-
-# Python IDE
+dist/
 .python-version
 
-# Local temp files
+# ============================================================
+# 编辑器与临时文件
+# ============================================================
 *.swp
 *.swo
 *~
-
-# Design specification docs (not iteration logs)
-docs/spec/
-docs/learning/
+.DS_Store

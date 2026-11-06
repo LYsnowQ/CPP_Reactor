@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
-project(CPPReactor LANGUAGES CXX)
+project(CPPReactor VERSION 1.2.0 LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# 未显式指定构建类型时使用 Release，与 Makefile 的 -O2 保持同一量级。
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
 # 全局标准设置
 set(CMAKE_CXX_STANDARD 20)
@@ -57,7 +62,7 @@ set(INCLUDE_DIRS
 find_package(Threads REQUIRED)
 
 # MySQL Connector/C++
-set(MYSQL_LIB ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib/libmysqlcppconn.so)
+set(MYSQL_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib)
 
 # ============================================================
 # 目标：main_run（HTTP 服务器）
@@ -69,16 +74,17 @@ add_executable(main_run
 
 target_include_directories(main_run PRIVATE ${INCLUDE_DIRS})
 
+target_link_directories(main_run PRIVATE ${MYSQL_LIB_DIR})
 target_link_libraries(main_run
     PRIVATE
         Threads::Threads
-        ${MYSQL_LIB}
+        mysqlcppconn
 )
 
-set_target_properties(main_run PROPERTIES
-    BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib"
-    INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/mysql-cppconn/lib"
-)
+# 关闭 CMake 自动 RPATH（它会写入源码树的绝对路径），改用 $ORIGIN 相对路径，
+# 与 Makefile 的行为一致，构建目录可整体移动。
+set_target_properties(main_run PROPERTIES SKIP_BUILD_RPATH TRUE)
+target_link_options(main_run PRIVATE "-Wl,-rpath,$ORIGIN/../third_party/mysql-cppconn/lib")
 
 # ============================================================
 # 目标：main_echo（基准压测服务器，无 HTTP 解析）
@@ -90,7 +96,13 @@ add_executable(main_echo
 
 target_include_directories(main_echo PRIVATE ${INCLUDE_DIRS})
 
+target_link_directories(main_echo PRIVATE ${MYSQL_LIB_DIR})
 target_link_libraries(main_echo
     PRIVATE
         Threads::Threads
+        mysqlcppconn
 )
+
+# main_echo 复用同一份 CORE_SOURCES，其中包含 SQL 模块，因此同样需要 MySQL 库与 RPATH。
+set_target_properties(main_echo PROPERTIES SKIP_BUILD_RPATH TRUE)
+target_link_options(main_echo PRIVATE "-Wl,-rpath,$ORIGIN/../third_party/mysql-cppconn/lib")

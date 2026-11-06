@@ -1,0 +1,7 @@
+-std=c++20
+-Wall
+-Wextra
+-Iinclude
+-Ithird_party
+-Ithird_party/nlohmann_json
+-Ithird_party/mysql-cppconn/include

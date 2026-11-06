@@ -1,6 +1,12 @@
 .git
+.github
 .gitignore
+docs
+notes
+tests
+*.md
 build/
+build-*/
 cmake-build-*/
 CMakeUserPresets.json
 CMakePresets.json
