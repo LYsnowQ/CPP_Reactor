@@ -38,12 +38,17 @@
 - `docker-compose.yml` 移除无效的 `seed_data.py` 挂载（MySQL 不会执行 `.py`）。
 - 新增 `--enable-sql` 启动开关；未开启时 SQL 配置不会被读取（#1）。
 - 新增 `tests/test_sql_security.sh`，CI 覆盖默认关闭、只读护栏与错误参数（#1）。
+- `SQLConfig` 字段收敛：移除从未生效的 `driver`、`connMode`、`reconnect*`、`initSqls`、
+  `slowQueryMs`、`enableSqlLog`；模板与 `docker-entrypoint.sh` 同步（#4）。
+- `--enable-sql` 启动时执行 `SqlConfig::validate()`，空 `host`/`database` 等直接退出（#4）。
+- `pingBeforeUse`、`maxConnLifetimeMs`、`maxConnIdleMs` 接入 `ThreadLocalConnOptions`（#4）。
 
 ### Fixed
 
 - `tests/run_http_cases.py`：超大体请求在收到 RST 时保留已读字节（413 用例恢复通过）；
   分片 Body 用例改为对 `GET /` 验证，期望值与实际路由语义一致。此前 4 个用例有 2 个失败。
 - SQL 异步失败路径闭环：数据库连接/ping 异常回写 500，执行器拒绝任务回 503，不再永久挂起（#3）。
+- 移除 `SQLConfig` 中“解析但未生效”的字段；配置字段与行为一一对应（#4）。
 - README 中“支持大文件分片传输”“多 Sink”“慢查询日志”等与实现不符的描述已删除或标注限制。
 
 ### Docs

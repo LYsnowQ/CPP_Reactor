@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <stdexcept>
 
 namespace reactor::persistence
 {
@@ -14,46 +13,6 @@ namespace reactor::persistence
             return std::all_of(s.begin(), s.end(),
                                [](unsigned char ch) { return std::isspace(ch) != 0; });
         }
-
-        DriverKind parseDriverKind_(const std::string &value)
-        {
-            if (value == "mysql_connector_cpp")
-            {
-                return DriverKind::MysqlConnectorCpp;
-            }
-            throw std::invalid_argument("driver 非法，当前仅支持: mysql_connector_cpp");
-        }
-
-        ConnMode parseConnMode_(const std::string &value)
-        {
-            if (value == "thread_local_single_conn")
-            {
-                return ConnMode::ThreadLocalSingleConn;
-            }
-            throw std::invalid_argument("connMode 非法，当前仅支持: thread_local_single_conn");
-        }
-
-        const char *driverKindToString_(DriverKind value)
-        {
-            switch (value)
-            {
-            case DriverKind::MysqlConnectorCpp:
-                return "mysql_connector_cpp";
-            default:
-                return "unknown";
-            }
-        }
-
-        const char *connModeToString_(ConnMode value)
-        {
-            switch (value)
-            {
-            case ConnMode::ThreadLocalSingleConn:
-                return "thread_local_single_conn";
-            default:
-                return "unknown";
-            }
-        }
     } // namespace
 
     // ====================================================================
@@ -61,21 +20,11 @@ namespace reactor::persistence
     // ====================================================================
     //
     // 逐字段检查，失败即返回（短路），err 中包含首个失败原因。
-    // 检查顺序：驱动类型 → 连接模式 → 连接信息 → 超时 → 生命周期 → 初始化 SQL。
+    // 这里只校验“真正生效”的字段，避免配置看起来合法但行为缺失。
     bool SqlConfig::validate(std::string &err) const
     {
         err.clear();
 
-        if (driver == DriverKind::Unknown)
-        {
-            err = "driver 不能为空且必须是受支持值";
-            return false;
-        }
-        if (connMode == ConnMode::Unknown)
-        {
-            err = "connMode 不能为空且必须是受支持值";
-            return false;
-        }
         if (isBlank_(host))
         {
             err = "host 不能为空";
@@ -106,11 +55,6 @@ namespace reactor::persistence
             err = "connect/read/write timeout 必须大于 0";
             return false;
         }
-        if (reconnectMaxAttempts > 0 && reconnectBackoffMs == 0)
-        {
-            err = "reconnectBackoffMs 不能为 0（当 reconnectMaxAttempts > 0 时）";
-            return false;
-        }
         if (maxConnLifetimeMs == 0)
         {
             err = "maxConnLifetimeMs 必须大于 0";
@@ -126,25 +70,6 @@ namespace reactor::persistence
             err = "maxConnIdleMs 不能大于 maxConnLifetimeMs";
             return false;
         }
-        if (slowQueryMs == 0)
-        {
-            err = "slowQueryMs 必须大于 0";
-            return false;
-        }
-        if (initSqls.empty())
-        {
-            err = "initSqls 不能为空";
-            return false;
-        }
-
-        for (size_t i = 0; i < initSqls.size(); ++i)
-        {
-            if (isBlank_(initSqls[i]))
-            {
-                err = "initSqls 存在空 SQL，索引=" + std::to_string(i);
-                return false;
-            }
-        }
         return true;
     }
 
@@ -153,10 +78,9 @@ namespace reactor::persistence
     // ====================================================================
     //
     // 使用 j.at(key) 而非 j.value(key, default)，确保缺失必填字段时抛出异常。
-    // driver/connMode 字符串通过 parseDriverKind_/parseConnMode_ 转换为枚举。
+    // 旧配置中的未知键会被 nlohmann::json 忽略。
     void from_json(const nlohmann::json &j, SqlConfig &cfg)
     {
-        cfg.driver = parseDriverKind_(j.at("driver").get<std::string>());
         cfg.host = j.at("host").get<std::string>();
         cfg.port = j.at("port").get<uint16_t>();
         cfg.user = j.at("user").get<std::string>();
@@ -168,24 +92,16 @@ namespace reactor::persistence
         cfg.readTimeoutMs = j.at("readTimeoutMs").get<uint32_t>();
         cfg.writeTimeoutMs = j.at("writeTimeoutMs").get<uint32_t>();
 
-        cfg.connMode = parseConnMode_(j.at("connMode").get<std::string>());
         cfg.pingBeforeUse = j.at("pingBeforeUse").get<bool>();
-        cfg.reconnectMaxAttempts = j.at("reconnectMaxAttempts").get<uint32_t>();
-        cfg.reconnectBackoffMs = j.at("reconnectBackoffMs").get<uint32_t>();
         cfg.maxConnLifetimeMs = j.at("maxConnLifetimeMs").get<uint32_t>();
         cfg.maxConnIdleMs = j.at("maxConnIdleMs").get<uint32_t>();
 
-        cfg.initSqls = j.at("initSqls").get<std::vector<std::string>>();
-
-        cfg.slowQueryMs = j.at("slowQueryMs").get<uint32_t>();
-        cfg.enableSqlLog = j.at("enableSqlLog").get<bool>();
         cfg.readOnly = j.at("readOnly").get<bool>();
     }
 
     void to_json(nlohmann::json &j, const SqlConfig &cfg)
     {
         j = nlohmann::json{
-            {"driver", driverKindToString_(cfg.driver)},
             {"host", cfg.host},
             {"port", cfg.port},
             {"user", cfg.user},
@@ -195,15 +111,9 @@ namespace reactor::persistence
             {"connectTimeoutMs", cfg.connectTimeoutMs},
             {"readTimeoutMs", cfg.readTimeoutMs},
             {"writeTimeoutMs", cfg.writeTimeoutMs},
-            {"connMode", connModeToString_(cfg.connMode)},
             {"pingBeforeUse", cfg.pingBeforeUse},
-            {"reconnectMaxAttempts", cfg.reconnectMaxAttempts},
-            {"reconnectBackoffMs", cfg.reconnectBackoffMs},
             {"maxConnLifetimeMs", cfg.maxConnLifetimeMs},
             {"maxConnIdleMs", cfg.maxConnIdleMs},
-            {"initSqls", cfg.initSqls},
-            {"slowQueryMs", cfg.slowQueryMs},
-            {"enableSqlLog", cfg.enableSqlLog},
             {"readOnly", cfg.readOnly},
         };
     }

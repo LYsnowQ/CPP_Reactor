@@ -24,7 +24,6 @@
 #include "protocol/HttpRequest.hpp"
 #include "protocol/HttpRouter.hpp"
 #include "spdlog/spdlog.h"
-#include "utils/JsonConfigLoader.hpp"
 
 namespace
 {
@@ -109,15 +108,20 @@ int main(int argc, const char **argv)
         if (enableSql)
         {
             // SQL 端点显式开启时才读取配置；默认关闭让静态文件服务不依赖数据库。
+            // loadSqlConfigFromFileOrThrow 会执行 validate：空 host/database 等直接启动失败。
             const auto sqlConfigPath = origCwd / "config" / "SQLConfig.json";
             const auto sqlConfig =
-                reactor::utils::config::loadJsonFileOrThrow(sqlConfigPath)
-                    .get<reactor::persistence::SqlConfig>();
-            spdlog::debug("SQL 配置加载完成 {}", sqlConfigPath.string());
+                reactor::persistence::loadSqlConfigFromFileOrThrow(sqlConfigPath);
+            spdlog::debug("SQL 配置加载并校验完成 {}", sqlConfigPath.string());
+
+            reactor::persistence::ThreadLocalConnOptions connOptions;
+            connOptions.pingBeforeUse = sqlConfig.pingBeforeUse;
+            connOptions.maxConnLifetimeMs = sqlConfig.maxConnLifetimeMs;
+            connOptions.maxConnIdleMs = sqlConfig.maxConnIdleMs;
 
             auto executor = std::make_shared<reactor::persistence::SqlExecutor>(
                 reactor::persistence::ThreadLocalSingleConn(
-                    reactor::persistence::ThreadLocalConnOptions{},
+                    connOptions,
                     [sqlConfig]() -> std::unique_ptr<reactor::persistence::ISqlConnection>
                     {
                         return std::make_unique<reactor::persistence::MySqlConnection>(sqlConfig);

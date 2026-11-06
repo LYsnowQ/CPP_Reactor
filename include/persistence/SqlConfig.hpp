@@ -2,41 +2,25 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
-#include <vector>
 #include <nlohmann/json.hpp>
 
 namespace reactor::persistence
 {
 
-/// @brief 数据库驱动类型
-enum class DriverKind : uint8_t
-{
-    Unknown = 0,
-    MysqlConnectorCpp
-};
-
-/// @brief 连接管理策略
-enum class ConnMode : uint8_t
-{
-    Unknown = 0,
-    ThreadLocalSingleConn
-};
-
 /// @brief 数据库连接配置模型
 ///
-/// 包含连接参数、超时规则、连接策略、初始化 SQL 和观测配置。
-/// 支持 JSON 序列化/反序列化（from_json/to_json）和字段校验（validate）。
+/// 只保留**真正生效**的字段：连接信息、三组超时、连接管理选项与 HTTP 只读护栏。
+/// 历史配置中的 driver / connMode / reconnect* / initSqls / slowQueryMs / enableSqlLog
+/// 已被移除；反序列化会忽略这些多余键，不会报错。
 ///
 /// 校验规则：
-///   - driver/connMode 不能为 Unknown
 ///   - host/user/database/charset 不能为空
-///   - port/超时/连接生命周期必须大于 0
-///   - maxConnIdleMs ≤ maxConnLifetimeMs
-///   - initSqls 非空且每项非空
+///   - port 必须大于 0
+///   - 三组超时必须大于 0
+///   - maxConnLifetimeMs / maxConnIdleMs 必须大于 0，且 idle ≤ lifetime
 struct SqlConfig
 {
     // 基本连接信息
-    DriverKind driver = DriverKind::Unknown;
     std::string host;
     uint16_t port = 0;
     std::string user;
@@ -49,19 +33,12 @@ struct SqlConfig
     uint32_t readTimeoutMs = 0;
     uint32_t writeTimeoutMs = 0;
 
-    // 模型策略
-    ConnMode connMode = ConnMode::Unknown;
+    // 连接管理
     bool pingBeforeUse = false;
-    uint32_t reconnectMaxAttempts = 0;
-    uint32_t reconnectBackoffMs = 0;
     uint32_t maxConnLifetimeMs = 0;
     uint32_t maxConnIdleMs = 0;
 
-    std::vector<std::string> initSqls;
-
-    // 观测和保护
-    uint32_t slowQueryMs = 0;
-    bool enableSqlLog = false;
+    // HTTP 端点只读护栏（仅影响 /sql、/query）
     bool readOnly = false;
 
     /// @brief 校验配置字段是否合法

@@ -25,7 +25,6 @@ fi
 mkdir -p "${TMP_DIR}/config"
 cat > "${TMP_DIR}/config/SQLConfig.json" <<'JSON'
 {
-    "driver": "mysql_connector_cpp",
     "host": "127.0.0.1",
     "port": 1,
     "user": "root",
@@ -35,20 +34,17 @@ cat > "${TMP_DIR}/config/SQLConfig.json" <<'JSON'
     "connectTimeoutMs": 1000,
     "readTimeoutMs": 1000,
     "writeTimeoutMs": 1000,
-    "connMode": "thread_local_single_conn",
     "pingBeforeUse": true,
-    "reconnectMaxAttempts": 1,
-    "reconnectBackoffMs": 100,
     "maxConnLifetimeMs": 600000,
     "maxConnIdleMs": 60000,
-    "initSqls": ["SELECT 1"],
-    "slowQueryMs": 1000,
-    "enableSqlLog": false,
     "readOnly": true
 }
 JSON
 
-"${BIN}" "${PORT}" "${TMP_DIR}" epoll 2 close --enable-sql > "${TMP_DIR}/server.log" 2>&1 &
+(
+    cd "${TMP_DIR}"
+    exec "${BIN}" "${PORT}" "${TMP_DIR}" epoll 2 close --enable-sql
+) > "${TMP_DIR}/server.log" 2>&1 &
 SERVER_PID=$!
 
 ready=0
@@ -90,6 +86,28 @@ check_sql "comment_prefix"    "/* x */ DROP TABLE users" 403
 check_sql "select_db_down_1"  "SELECT 1" 500
 check_sql "select_db_down_2"  "SELECT 1" 500
 check_sql "select_db_down_3"  "SELECT 1" 500
+
+# 空配置 + --enable-sql 必须启动失败（validate 生效）。
+EMPTY_DIR="${TMP_DIR}/empty"
+mkdir -p "${EMPTY_DIR}/config"
+cp "${ROOT_DIR}/config/SQLConfig.json" "${EMPTY_DIR}/config/SQLConfig.json"
+set +e
+(
+    cd "${EMPTY_DIR}"
+    "${BIN}" 18097 "${EMPTY_DIR}" epoll 2 close --enable-sql
+) > "${EMPTY_DIR}/server.log" 2>&1
+empty_rc=$?
+set -e
+if [[ "${empty_rc}" -eq 0 ]]; then
+    echo "[FAIL] empty_config expected=non-zero got=0"
+    failed=$((failed + 1))
+elif grep -q "配置校验失败" "${EMPTY_DIR}/server.log"; then
+    echo "[PASS] empty_config -> 启动失败（配置校验失败）"
+else
+    echo "[FAIL] empty_config 启动失败但缺少校验信息"
+    cat "${EMPTY_DIR}/server.log"
+    failed=$((failed + 1))
+fi
 
 code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${PORT}/sql" || true)"
 if [[ "${code}" == "400" ]]; then

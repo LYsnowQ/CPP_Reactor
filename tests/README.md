@@ -66,7 +66,7 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 |------|------|------|
 | `test_smoke.sh` | curl | 快速确认服务是否可访问，检查 HTTP 返回码 |
 | `run_http_cases.py` | socket | 覆盖 413 大包、分片请求、非法请求、SQL 默认关闭等边缘情况 |
-| `test_sql_security.sh` | curl | 验证 SQL 默认关闭、只读护栏（写语句 403）、数据库不可达回 500、参数缺失 400 |
+| `test_sql_security.sh` | curl | 验证 SQL 默认关闭、只读护栏（写语句 403）、数据库不可达回 500、空配置启动失败、参数缺失 400 |
 | `seed_data.py` | pymysql | 向 MySQL users 表插入 5 万行测试数据 |
 
 > `run_http_cases.py` 当前覆盖 9 条路径：合法 GET、非法请求行、目录索引隐藏敏感条目、

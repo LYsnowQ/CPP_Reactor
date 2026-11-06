@@ -53,42 +53,35 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 
 | 键 | 类型 | 模板值 | 结构体默认 | 是否生效 | 说明 |
 |----|------|--------|-----------|---------|------|
-| `driver` | string | `mysql_connector_cpp` | `Unknown` | ❌ 解析后未使用 | 连接固定走 JDBC 驱动实例 |
-| `host` | string | `""` | `""` | ✅ | 空值导致连接失败 |
-| `port` | int | `3306` | `0` | ✅ | `uint16_t` |
-| `user` | string | `"root"` | `""` | ✅ | |
+| `host` | string | `""` | `""` | ✅ | 空值启动校验失败 |
+| `port` | int | `3306` | `0` | ✅ | `uint16_t`；0 启动校验失败 |
+| `user` | string | `"root"` | `""` | ✅ | 空值启动校验失败 |
 | `password` | string | `""` | `""` | ✅ | 不得提交真实密码 |
-| `database` | string | `""` | `""` | ✅ | 空值时连接不带 schema |
+| `database` | string | `""` | `""` | ✅ | 空值启动校验失败 |
 | `charset` | string | `utf8mb4` | `""` | ✅ | 映射到 `OPT_CHARSET_NAME` 与 `characterSetResults` |
 | `connectTimeoutMs` | int | `5000` | `0` | ✅ | 传给驱动时除以 1000（秒），`<1000` 会变成 0 |
 | `readTimeoutMs` | int | `5000` | `0` | ✅ | 同上 |
 | `writeTimeoutMs` | int | `5000` | `0` | ✅ | 同上 |
-| `connMode` | string | `thread_local_single_conn` | `Unknown` | ❌ 解析后未使用 | 只支持这一种连接管理方式 |
-| `pingBeforeUse` | bool | `true` | `false` | ❌ 未接线 | `main.cpp` 传入的 `ThreadLocalConnOptions{}` 使用自己的默认值 |
-| `reconnectMaxAttempts` | int | `3` | `0` | ❌ 未使用 | 驱动参数 `OPT_RECONNECT` 硬编码为 true |
-| `reconnectBackoffMs` | int | `1000` | `0` | ❌ 未使用 | 仅 `validate` 中做非零检查 |
-| `maxConnLifetimeMs` | int | `1800000` | `0` | ❌ 未接线 | 管理器实际使用 `ThreadLocalConnOptions` 的 30 分钟默认值 |
-| `maxConnIdleMs` | int | `60000` | `0` | ❌ 未接线 | 管理器实际使用 60 秒默认值 |
-| `initSqls` | array | `["SELECT 1"]` | 空 | ❌ 未执行 | 连接建立后不执行初始化 SQL |
-| `slowQueryMs` | int | `1000` | `0` | ❌ 未使用 | 没有慢查询日志 |
-| `enableSqlLog` | bool | `true` | `false` | ❌ 未使用 | SQL 日志未实现 |
-| `readOnly` | bool | `true` | `false` | ✅ HTTP 只读护栏 | `true` 时仅允许单条 SELECT/SHOW/DESCRIBE/EXPLAIN；`false` 允许任意 SQL |
+| `pingBeforeUse` | bool | `true` | `false` | ✅ | 传入 `ThreadLocalConnOptions` |
+| `maxConnLifetimeMs` | int | `1800000` | `0` | ✅ | 传入 `ThreadLocalConnOptions` |
+| `maxConnIdleMs` | int | `60000` | `0` | ✅ | 传入 `ThreadLocalConnOptions`，且必须 ≤ lifetime |
+| `readOnly` | bool | `true` | `false` | ✅ | HTTP 只读护栏：`true` 仅允许单条 SELECT/SHOW/DESCRIBE/EXPLAIN |
 
-证据：
+历史字段 `driver`、`connMode`、`reconnectMaxAttempts`、`reconnectBackoffMs`、`initSqls`、
+`slowQueryMs`、`enableSqlLog` 从未真正生效，已从模型与模板中移除。旧配置文件里的这些键
+会被 `nlohmann::json` 忽略，不会导致启动失败。
 
-- `src/app/main.cpp:72-85`：使用通用 `loadJsonFileOrThrow`，并传入 `ThreadLocalConnOptions{}`；
-- `src/persistence/MySqlConnection.cpp:145-180`：只消费连接级字段与三组超时；
-- `src/persistence/ThreadLocalSqlConn.cpp:61-98`：使用 `ThreadLocalConnOptions` 而非 `SqlConfig`；
-- `src/persistence/SqlConfig.cpp:65-150`：存在 `validate()`，但启动链路从未调用。
+### 启动校验
 
-### 启动校验缺失
+`main.cpp` 在 `--enable-sql` 时调用 `loadSqlConfigFromFileOrThrow()`，它会读取 JSON 并执行
+`SqlConfig::validate()`；校验失败直接退出，错误形如：
 
-`loadSqlConfigFromFileOrThrow()`（读取 + `validate`）已经实现，但 `main.cpp` 没有使用它，
-而是直接 `json → SqlConfig` 隐式转换。结果是：
+```text
+服务器初始化/运行异常: 配置校验失败: host 不能为空
+```
 
-- 缺键会失败（`at()`）；
-- 空 `host`/`database`、`0` 端口、超时缺失等**不会**在启动时被拦住，
-  服务照常启动，直到第一次 `/sql` 才失败（并且当前会挂起，见 BACKLOG B-02）。
+校验规则：`host`/`user`/`database`/`charset` 非空，`port > 0`，三组超时 `> 0`，
+`maxConnLifetimeMs`/`maxConnIdleMs > 0` 且 idle ≤ lifetime。未开启 SQL 时不读取、不校验配置。
 
 ## 4. Docker 环境变量
 
@@ -102,7 +95,7 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 | `MYSQL_PASSWORD` | `root` | `root` |
 | `MYSQL_DATABASE` | `test` | `test` |
 
-生成的配置包含完整字段（含未生效字段），因此容器内行为与本机一致。
+生成的配置包含当前全部字段，因此容器内行为与本机一致。
 注意：entrypoint 会**覆盖**镜像内 `config/SQLConfig.json`，挂载自定义配置时需绕过该脚本或挂到别处。
 
 ## 5. 端口与网络

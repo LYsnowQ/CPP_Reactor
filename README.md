@@ -69,7 +69,7 @@ CPPReactor 从零实现了一个 C++20 的 HTTP/1.1 服务器：主线程 `accep
 | **统一状态码** | `StatusCode` 贯穿事件循环、分发器与启动链路 | — |
 | **可观测性** | 原子计数器 + 每 5 秒窗口日志（QPS、连接数、字节数、延迟） | 无 `/metrics` 导出端点 |
 | **日志** | spdlog，控制台输出 | 级别在代码中固定为 `debug`，未做可配置 |
-| **JSON 配置** | nlohmann_json 读取 `config/SQLConfig.json` | 部分字段只解析未生效，见[配置文档](./docs/architecture/CONFIGURATION.md) |
+| **JSON 配置** | nlohmann_json 读取 `config/SQLConfig.json` | 保留字段均已生效；未实现字段已移除 |
 | **容器化** | Dockerfile + docker-compose（MySQL 8.0） | 容器内以 root 运行，测试数据需手动注入 |
 | **测试与压测** | 冒烟、HTTP 边界用例、wrk 压测脚本（静态 / Echo / SQL） | 无自动化数据库集成测试 |
 
@@ -168,7 +168,7 @@ SQL 端点默认**不注册**，普通静态服务不需要数据库，也不会
 
 ## 配置
 
-完整的配置面（命令行参数、JSON 字段、环境变量、路径语义与“解析了但未生效”的字段）见
+完整的配置面（命令行参数、JSON 字段、环境变量、路径语义与启动校验）见
 [docs/architecture/CONFIGURATION.md](./docs/architecture/CONFIGURATION.md)。
 
 命令行参数：
@@ -190,8 +190,8 @@ SQL 端点默认**不注册**，普通静态服务不需要数据库，也不会
 | `--enable-sql` | 关闭 | 注册 `/query`、`/sql`，并在启动时读取 `config/SQLConfig.json` |
 
 SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（`host`/`database` 为空）。
-不开启 `--enable-sql` 时不会读取它；开启后配置错误会在使用时失败（启动校验见
-[BACKLOG B-04](./docs/plan/BACKLOG.md)）。
+不开启 `--enable-sql` 时不会读取它；开启时会先执行校验，空 `host`/`database` 等直接启动失败，
+不会带着错误配置继续运行。
 
 ---
 

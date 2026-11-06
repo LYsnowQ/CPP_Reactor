@@ -54,6 +54,7 @@
 | 在 Windows 直接 `make` | 用 WSL2（Ubuntu 22.04）或 Linux |
 | 在非仓库根目录启动 | 配置按启动时工作目录解析，会找不到 `config/SQLConfig.json` |
 | 以为 `/sql` 默认可用 | 默认不注册，需要追加 `--enable-sql` |
+| 以为空模板 + `--enable-sql` 能启动 | 启动校验会失败；先填 `host`/`database` 等必填项 |
 | 以为 `--enable-sql` 就等于安全 | `readOnly` 只提供启发式语句护栏，仍需只读数据库账号与网络隔离 |
 | 以为 `/sql` 出错不会回包 | 连接失败已回写 500、执行器停止回 503；见 `tests/test_sql_security.sh` |
 | 以为 CMake 与 Make 等价 | CMake 的 `main_echo` 曾漏链 MySQL 库（已修）；改构建时两边都验证 |
