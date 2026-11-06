@@ -53,11 +53,14 @@
 - 需要演示写操作或事务；
 - 决定把项目升级为“可部署 demo”而不是纯学习项目。
 
-## 实施更新（2026-11-06，issue #1）
+## 实施更新（2026-11-06，issue #1、#14）
 
 - `/query`、`/sql` 改为**默认不注册**，需追加 `--enable-sql`；
 - `readOnly: true` 时启用 HTTP 层启发式护栏：仅允许单条
-  `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`，写语句返回 403；
+  `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`；写语句、多语句、注释序列，以及
+  `INTO OUTFILE`、`INTO DUMPFILE`、`FOR UPDATE`、`FOR SHARE`、`LOCK IN SHARE MODE`、
+  `LOAD_FILE()`、`SLEEP()`、`BENCHMARK()`、`GET_LOCK()`、`RELEASE_LOCK()` 返回 403；
 - `readOnly: false` 显式允许任意 SQL，启动日志给出警告；
-- 仍未解决：无鉴权、静态根可下载配置（B-02）、数据库失败挂起（B-03）。
+- 静态根配置下载与数据库失败挂起已由 #2、#3 处理；
+- 仍未解决：无鉴权；只读护栏仍是启发式，不能替代数据库只读账号。
   因此“不要暴露到公网”的结论不变。
