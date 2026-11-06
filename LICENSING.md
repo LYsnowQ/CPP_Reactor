@@ -1,5 +1,7 @@
 # Licensing
 
+[English](LICENSING.en.md) | 简体中文
+
 本文件说明 `CPPReactor` 的许可边界。它不是法律意见；涉及商业授权时请咨询律师。
 
 ## 1. 现行许可（从本文件所在提交起）

@@ -4,6 +4,12 @@
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。规则见
 [docs/conventions/VERSIONING.md](./docs/conventions/VERSIONING.md)。
 
+## [Unreleased]
+
+### Docs
+
+- 新增英文 [README.en.md](./README.en.md) 与 [LICENSING.en.md](./LICENSING.en.md)，中英文互链。
+
 ## [2.0.0] - 2026-11-06
 
 ### Breaking Changes
