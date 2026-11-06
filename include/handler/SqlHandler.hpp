@@ -18,10 +18,12 @@ namespace reactor::handler
 /// 响应格式：
 ///   200 — JSON 二维数组 [[col1, col2, ...], ...]
 ///   400 — {"error":"Missing 'sql' query parameter"}
-///   405 — {"error":"Method not allowd"}
+///   403 — {"error":"Only read-only statements are allowed"}（readOnly 模式）
+///   405 — {"error":"Method not allowed"}
 ///   500 — {"error":"SQL query failed", "message":"..."}
 ///
 /// @param executor SqlExecutor 共享所有权（多个连接/处理器可共用）
+/// @param readOnly true 时只允许 SELECT/SHOW/DESCRIBE/EXPLAIN 单条语句
 /// @thread handle() 由 EventLoop 线程调用，内部提交到 SqlExecutor 后台线程
 /// @warning handle() 返回的 HandlerResult.async = true，TcpConnection 不立即发送响应
 class SqlHandler : public IHttpHandler
@@ -29,7 +31,9 @@ class SqlHandler : public IHttpHandler
 public:
     /// @brief 构造 SQL 查询处理器
     /// @param executor SqlExecutor 共享指针，至少存活到所有未完成的查询返回
-    explicit SqlHandler(std::shared_ptr<persistence::SqlExecutor> executor);
+    /// @param readOnly 是否启用只读语句护栏（默认 true）
+    explicit SqlHandler(std::shared_ptr<persistence::SqlExecutor> executor,
+                        bool readOnly = true);
 
     /// @brief 处理 GET 请求，执行 SQL 查询并异步回写 JSON 结果
     ///
@@ -49,6 +53,7 @@ public:
 
 private:
     std::shared_ptr<persistence::SqlExecutor> executor_;
+    bool readOnly_{true};
 };
 
 } // namespace reactor::handler

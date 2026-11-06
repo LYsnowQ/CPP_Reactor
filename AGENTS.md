@@ -18,9 +18,11 @@
 
 - Linux / WSL2 项目；Windows 原生不能编译（依赖 epoll、POSIX API）。
 - 构建：`make clean && make -j"$(nproc)"`；产物 `build/main_run`、`build/main_echo`。
-- 启动：`./build/main_run 8080 . epoll 4 keepalive 100 10000`（必须在仓库根目录，否则找不到配置）。
+- 启动：`./build/main_run 8080 . epoll 4 keepalive 100 10000`（必须在仓库根目录，否则找不到配置）；
+  需要 SQL 演示端点时追加 `--enable-sql`。
 - 测试：`bash tests/test_smoke.sh http://127.0.0.1:8080/`、
-  `python3 tests/run_http_cases.py 127.0.0.1 8080`、`python3 scripts/check_docs.py`。
+  `python3 tests/run_http_cases.py 127.0.0.1 8080`、
+  `bash tests/test_sql_security.sh`、`python3 scripts/check_docs.py`。
 - 版本：`1.2.0`，版本记录在 [CHANGELOG.md](./CHANGELOG.md)；tag 未推送。
 
 ## 3. 硬性约束（违反即退回）
@@ -51,7 +53,8 @@
 |------|---------|
 | 在 Windows 直接 `make` | 用 WSL2（Ubuntu 22.04）或 Linux |
 | 在非仓库根目录启动 | 配置按启动时工作目录解析，会找不到 `config/SQLConfig.json` |
-| 以为 `readOnly` 生效 | 它只被解析，没有强制执行；见 BACKLOG B-01 |
+| 以为 `/sql` 默认可用 | 默认不注册，需要追加 `--enable-sql` |
+| 以为 `--enable-sql` 就等于安全 | `readOnly` 只提供启发式语句护栏，仍需只读数据库账号与网络隔离 |
 | 以为 `/sql` 出错会返回 500 | 数据库连接失败会挂起；见 BACKLOG B-03 |
 | 以为 CMake 与 Make 等价 | CMake 的 `main_echo` 曾漏链 MySQL 库（已修）；改构建时两边都验证 |
 | 以为静态根只服务静态文件 | 它会把整个目录暴露为可下载文件，包括 `config/` |
@@ -71,7 +74,7 @@
 ## 7. 完成检查
 
 - [ ] `make` 零错误零警告；
-- [ ] 冒烟 + 4 个 HTTP 用例通过；
+- [ ] 冒烟 + 5 个 HTTP 用例 + SQL 安全用例通过；
 - [ ] `python3 scripts/check_docs.py` 通过；
 - [ ] 受影响的 README / architecture 文档已更新；
 - [ ] CHANGELOG 已补；

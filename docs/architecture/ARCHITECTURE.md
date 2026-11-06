@@ -39,7 +39,7 @@ app/            入口、参数解析、依赖装配
 | protocol | `HttpRequest` | 请求行/头/`Content-Length` Body 的增量解析（上限 1 MB） | 连接线程 |
 | protocol | `HttpRouter` | 方法 + 精确路径 + `:param` + 前缀匹配，未匹配 404 | 连接线程 |
 | handler | `StaticFileHandler` | GET 文件/目录索引、`/healthz`、路径穿越防护 | 连接线程 |
-| handler | `SqlHandler` | `GET /query|/sql?sql=`，提交后台执行，异步回写 | 连接线程 + SQL 线程 |
+| handler | `SqlHandler` | `GET /query|/sql?sql=`（仅 `--enable-sql` 注册），提交后台执行，异步回写 | 连接线程 + SQL 线程 |
 | persistence | `SqlExecutor` | 单工作线程 + 任务队列，异常只记日志 | 后台线程 |
 | persistence | `ThreadLocalSingleConn` | 每线程一个连接，按生命周期/空闲/ping 重建 | 使用线程 |
 | persistence | `MySqlConnection` | JDBC Connector/C++ 连接、query、事务 | 使用线程 |
@@ -134,7 +134,7 @@ router.addPrefix("/static", handler);   // 前缀匹配
 | 不支持 `chunked`、HTTP/2、WebSocket | 只适合简单请求 |
 | 响应体整体在内存中组装，静态文件整文件读入 | 大文件会占用内存，无 Range |
 | 单 SQL 工作线程、线程本地单连接 | 吞吐受限，非连接池 |
-| `/sql` 无鉴权，`readOnly` 未实施 | 仅限本机/隔离网络 |
+| `/sql` 默认关闭；开启后无鉴权，`readOnly` 仅提供启发式语句护栏 | 仅限本机/隔离网络 |
 | 部分 `SQLConfig` 字段只解析未使用 | 配置可能“看起来生效”但实际没有 |
 | 无优雅停机 | Ctrl-C 直接终止 |
 | 无单元测试 | 回归主要靠端到端用例 |

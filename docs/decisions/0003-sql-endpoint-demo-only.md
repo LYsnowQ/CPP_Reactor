@@ -1,6 +1,6 @@
 # 0003 — `/sql` 仅作为演示端点保留
 
-- 状态：accepted（带技术债）
+- 状态：accepted（部分实施：默认关闭 + 只读护栏）
 - 日期：2026-11-06
 - 相关：[HTTP-API.md §4/§6](../architecture/HTTP-API.md)、[BACKLOG B-01/B-02](../plan/BACKLOG.md)
 
@@ -52,3 +52,12 @@
 - 准备把服务放到任何共享网络；
 - 需要演示写操作或事务；
 - 决定把项目升级为“可部署 demo”而不是纯学习项目。
+
+## 实施更新（2026-11-06，issue #1）
+
+- `/query`、`/sql` 改为**默认不注册**，需追加 `--enable-sql`；
+- `readOnly: true` 时启用 HTTP 层启发式护栏：仅允许单条
+  `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`，写语句返回 403；
+- `readOnly: false` 显式允许任意 SQL，启动日志给出警告；
+- 仍未解决：无鉴权、静态根可下载配置（B-02）、数据库失败挂起（B-03）。
+  因此“不要暴露到公网”的结论不变。

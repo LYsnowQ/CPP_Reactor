@@ -89,6 +89,16 @@ def run(host: str, port: int) -> int:
             "expect": 413,
         },
         {
+            # SQL 端点默认关闭：不注册 /sql，落到静态处理器后 404。
+            "name": "sql_endpoint_disabled",
+            "run": lambda: send_raw(
+                host,
+                port,
+                b"GET /sql?sql=SELECT%201 HTTP/1.1\r\nHost: local\r\n\r\n",
+            ),
+            "expect": 404,
+        },
+        {
             # GET 带请求体同样走增量解析；用 "/"（目录索引）验证分片 body
             # 解析完成后仍能正常分派并返回 200。
             "name": "split_content_length_body",

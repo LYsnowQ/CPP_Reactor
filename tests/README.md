@@ -35,16 +35,19 @@ bash tests/test_smoke.sh http://127.0.0.1:8080/
 # 4. HTTP 边界测试（仅标准库，无需虚拟环境）
 python3 tests/run_http_cases.py 127.0.0.1 8080
 
-# 5. HTTP 静态文件压测
+# 5. SQL 端点安全（默认关闭、只读护栏；不需要真实数据库）
+bash tests/test_sql_security.sh
+
+# 6. HTTP 静态文件压测
 bash tests/bench.sh static M
 
-# 6. Echo 基准压测
+# 7. Echo 基准压测
 bash tests/bench.sh echo ECHO
 
-# 7. SQL 连接测试（需已连接 MySQL + 已注入数据）
+# 8. SQL 连接测试（需已连接 MySQL + 已注入数据）
 bash tests/bench_sql.sh . S
 
-# 8. 数据注入（首次需要）
+# 9. 数据注入（首次需要）
 bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 ```
 
@@ -62,12 +65,13 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 | 文件 | 工具 | 用途 |
 |------|------|------|
 | `test_smoke.sh` | curl | 快速确认服务是否可访问，检查 HTTP 返回码 |
-| `run_http_cases.py` | socket | 覆盖 413 大包、分片请求、非法请求等边缘情况 |
+| `run_http_cases.py` | socket | 覆盖 413 大包、分片请求、非法请求、SQL 默认关闭等边缘情况 |
+| `test_sql_security.sh` | curl | 验证 SQL 端点默认关闭、只读护栏（写语句 403）、参数缺失 400 |
 | `seed_data.py` | pymysql | 向 MySQL users 表插入 5 万行测试数据 |
 
-> `run_http_cases.py` 当前覆盖 4 条路径：合法 GET、非法请求行、超 1 MB 体积（413）、
-> `Content-Length` 分片 Body。Keep-Alive 超时、408、403、405、SQL 错误路径尚未覆盖，
-> 见 [BACKLOG B-09](../docs/plan/BACKLOG.md)。
+> `run_http_cases.py` 当前覆盖 5 条路径：合法 GET、非法请求行、超 1 MB 体积（413）、
+> SQL 端点默认关闭（404）、`Content-Length` 分片 Body。Keep-Alive 超时、408、403、405、
+> SQL 错误路径尚未覆盖，见 [BACKLOG B-09](../docs/plan/BACKLOG.md)。
 >
 > 服务端返回 413 后可能立即关闭连接，客户端会先收到 RST；用例会保留 RST 之前已读到的字节。
 

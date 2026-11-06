@@ -28,6 +28,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol/HttpResponse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol/HttpRequest.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/JsonConfigLoader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/SqlStatementGuard.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/repository/sql/SqlRepository.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/persistence/SqlConfig.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/persistence/ThreadLocalSqlConn.cpp

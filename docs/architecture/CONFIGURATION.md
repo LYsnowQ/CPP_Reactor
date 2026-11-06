@@ -26,7 +26,7 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 
 ```bash
 ./build/main_run <port> <resource_path> [dispatcher] [threads] [conn_mode] \
-                 [keepalive_max_reqs] [keepalive_idle_ms]
+                 [keepalive_max_reqs] [keepalive_idle_ms] [--enable-sql]
 ```
 
 | 位置 | 参数 | 代码默认 | 解析方式 | 说明 |
@@ -38,13 +38,14 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 | 5 | `conn_mode` | `close` | 字符串比较 | 只有 `keepalive` 开启，其他值等同 `close` |
 | 6 | `keepalive_max_reqs` | `100` | `atoi` | 仅 keepalive 生效 |
 | 7 | `keepalive_idle_ms` | `10000` | `atoi` | 仅 keepalive 生效 |
+| — | `--enable-sql` | 关闭 | 布尔 flag，可出现在任意位置 | 注册 `/query`、`/sql`，并读取 SQL 配置 |
 
-参数个数少于 3 时打印 Usage 并返回 -1。没有 `--help` / `--version`。
+位置参数少于 2 个时打印 Usage 并返回 -1；`--help` / `-h` 返回 0。暂无 `--version`。
 
 ## 3. SQL 配置字段
 
-`config/SQLConfig.json` 的**所有键都是必填**：反序列化使用 `j.at(key)`，缺键会抛异常。
-仓库内是空凭据模板，可以启动，但 `/sql` 不可用。
+`config/SQLConfig.json` **仅在 `--enable-sql` 时读取**。所有键都是必填：反序列化使用
+`j.at(key)`，缺键会抛异常。仓库内是空凭据模板，不开启 SQL 时不会读取，也不影响静态服务。
 
 | 键 | 类型 | 模板值 | 结构体默认 | 是否生效 | 说明 |
 |----|------|--------|-----------|---------|------|
@@ -67,7 +68,7 @@ cd /tmp && /path/to/build/main_run 8080 /path/to/CPPReactor epoll 4
 | `initSqls` | array | `["SELECT 1"]` | 空 | ❌ 未执行 | 连接建立后不执行初始化 SQL |
 | `slowQueryMs` | int | `1000` | `0` | ❌ 未使用 | 没有慢查询日志 |
 | `enableSqlLog` | bool | `true` | `false` | ❌ 未使用 | SQL 日志未实现 |
-| `readOnly` | bool | `true` | `false` | ❌ **未强制执行** | ⚠️ 只是解析/序列化，不限制 SQL 写操作 |
+| `readOnly` | bool | `true` | `false` | ✅ HTTP 只读护栏 | `true` 时仅允许单条 SELECT/SHOW/DESCRIBE/EXPLAIN；`false` 允许任意 SQL |
 
 证据：
 

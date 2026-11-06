@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+### Security
+
+- `/sql` 与 `/query` 默认不注册，必须显式追加 `--enable-sql` 才开启（#1）。
+- `readOnly: true` 时启用 HTTP 层只读护栏：仅允许单条 `SELECT` / `SHOW` / `DESCRIBE` /
+  `EXPLAIN`，写语句、多语句、注释开头一律 403；`readOnly: false` 显式允许任意 SQL 并输出警告。
+
 ### Added
 
 - 新增 `docs/conventions/`：项目定位、文档、版本、Git 工作流、测试、代码审查六份规范。
@@ -29,6 +35,8 @@
   未链接 MySQL 库导致的链接失败；RPATH 改为相对 `$ORIGIN`。
 - `.gitignore` 清理失效的 Conan 条目与重复项；`.dockerignore` 排除文档与测试目录。
 - `docker-compose.yml` 移除无效的 `seed_data.py` 挂载（MySQL 不会执行 `.py`）。
+- 新增 `--enable-sql` 启动开关；未开启时 SQL 配置不会被读取（#1）。
+- 新增 `tests/test_sql_security.sh`，CI 覆盖默认关闭、只读护栏与错误参数（#1）。
 
 ### Fixed
 

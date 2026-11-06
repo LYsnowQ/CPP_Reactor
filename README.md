@@ -16,8 +16,8 @@
 >
 > 本项目是个人 C++ 网络编程学习项目，用于实践 Reactor 多线程模型、HTTP 协议解析、
 > 连接生命周期管理和 MySQL 异步查询。**它不是生产级服务器**：
-> 没有 TLS、没有鉴权、`/sql` 端点会执行 URL 中的任意 SQL（且 `readOnly` 尚未真正生效），
-> 请不要把本服务直接暴露到公网。详见[安全边界](#安全边界)与[已知问题](./docs/plan/BACKLOG.md)。
+> 没有 TLS、没有鉴权，`/sql` 端点默认关闭；显式开启后默认只允许只读语句，
+> 但服务整体仍不适合公网。请不要把本服务直接暴露到公网。详见[安全边界](#安全边界)与[已知问题](./docs/plan/BACKLOG.md)。
 
 ## 目录
 
@@ -65,7 +65,7 @@ CPPReactor 从零实现了一个 C++20 的 HTTP/1.1 服务器：主线程 `accep
 | **HTTP/1.1 解析** | 请求行、请求头、`Content-Length` Body，支持半包增量解析 | 不支持 `chunked`、不支持 HTTP/2 |
 | **Keep-Alive** | 请求数上限、空闲超时、`Connection` 头协商 | — |
 | **静态文件服务** | 目录索引、MIME 推断、`/healthz`、路径穿越防护 | 整文件读入内存，无 Range/分片传输 |
-| **MySQL 查询（演示）** | 线程本地单连接、异步执行、结果转 JSON、跨线程回写 | 仅单连接模式；`/sql` 无鉴权 |
+| **MySQL 查询（演示）** | 线程本地单连接、异步执行、结果转 JSON、跨线程回写 | 默认关闭，需 `--enable-sql`；只读模式有语句护栏；无鉴权 |
 | **统一状态码** | `StatusCode` 贯穿事件循环、分发器与启动链路 | — |
 | **可观测性** | 原子计数器 + 每 5 秒窗口日志（QPS、连接数、字节数、延迟） | 无 `/metrics` 导出端点 |
 | **日志** | spdlog，控制台输出 | 级别在代码中固定为 `debug`，未做可配置 |
@@ -150,12 +150,20 @@ cmake --build build-cmake -j"$(nproc)"
 
 ### 使用 MySQL（可选）
 
+SQL 端点默认**不注册**，普通静态服务不需要数据库，也不会读取 SQL 配置。
+
 1. 编辑 `config/SQLConfig.json`，至少填写 `host`、`user`、`password`、`database`；
-2. 重新启动服务；
+2. 启动时追加 `--enable-sql`：
+   ```bash
+   ./build/main_run 8080 . epoll 4 keepalive 100 10000 --enable-sql
+   ```
 3. 访问 `http://127.0.0.1:8080/sql?sql=SELECT%201`。
 
+> `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`；
+> 写语句返回 403。设置 `readOnly: false` 会允许任意 SQL，启动日志会给出警告。
+>
 > ⚠️ 当前数据库不可达时，`/sql` 请求会**一直挂起**而不是返回错误（已记录为
-> [BACKLOG B-02](./docs/plan/BACKLOG.md)）。请先在本地确认配置正确。
+> [BACKLOG B-03](./docs/plan/BACKLOG.md) / issue [#3](https://github.com/LYsnowQ/CPP_Reactor/issues/3)）。
 
 ---
 
@@ -168,7 +176,7 @@ cmake --build build-cmake -j"$(nproc)"
 
 ```bash
 ./build/main_run <port> <resource_path> [dispatcher] [threads] [conn_mode] \
-                 [keepalive_max_reqs] [keepalive_idle_ms]
+                 [keepalive_max_reqs] [keepalive_idle_ms] [--enable-sql]
 ```
 
 | 参数 | 默认值 | 说明 |
@@ -180,9 +188,11 @@ cmake --build build-cmake -j"$(nproc)"
 | `conn_mode` | `close` | `close` / `keepalive` |
 | `keepalive_max_reqs` | `100` | 单连接最大请求数 |
 | `keepalive_idle_ms` | `10000` | 空闲超时（毫秒） |
+| `--enable-sql` | 关闭 | 注册 `/query`、`/sql`，并在启动时读取 `config/SQLConfig.json` |
 
-SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（`host`/`database` 为空），
-直接启动不会报错，但 `/sql` 不可用。
+SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（`host`/`database` 为空）。
+不开启 `--enable-sql` 时不会读取它；开启后配置错误会在使用时失败（启动校验见
+[BACKLOG B-04](./docs/plan/BACKLOG.md)）。
 
 ---
 
@@ -191,8 +201,8 @@ SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（
 | 方法 | 路径 | 行为 |
 |------|------|------|
 | GET | `/healthz` | 返回 `ok\n`，200 |
-| GET | `/query?sql=...` | 异步执行 SQL，返回 JSON 数组；400/405/500 |
-| GET | `/sql?sql=...` | 与 `/query` 相同 |
+| GET | `/query?sql=...` | 仅 `--enable-sql` 时注册；异步执行 SQL；400/403/405/500 |
+| GET | `/sql?sql=...` | 与 `/query` 相同；未开启时落到静态处理器返回 404 |
 | GET | 其他路径 | 静态文件或目录索引；403/404/405 |
 | * | 其他方法 | 静态处理器返回 405 |
 
@@ -201,16 +211,17 @@ SQL 配置文件为 `config/SQLConfig.json`，仓库内是**空凭据模板**（
 
 ### 安全边界
 
-- `/sql` 接受 URL 中的**任意 SQL**，仅校验方法为 GET；
-- `config/SQLConfig.json` 中的 `readOnly` 目前**只被解析、未被执行**；
+- `/sql` 默认关闭；追加 `--enable-sql` 才会注册，且仍**没有鉴权**；
+- `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`，
+  写语句返回 403；这是 HTTP 层的启发式护栏，不是完整 SQL 解析器；
+- `readOnly: false` 会允许任意 SQL，只应在完全可信的本机环境使用；
 - 以仓库根目录作为静态根时，`config/SQLConfig.json` 会被当作普通文件提供下载——
-  填入真实数据库密码即等于公开密码；
+  填入真实数据库密码即等于公开密码（见 issue [#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)）；
 - 没有认证、授权、限流、TLS；
 - 结论：只在本机或隔离网络中使用，**不要暴露到公网**。
 
-这些问题已逐条登记在 [BACKLOG](./docs/plan/BACKLOG.md) 的 B-01、B-02，
-对应 issue [#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1)、
-[#2](https://github.com/LYsnowQ/CPP_Reactor/issues/2)。
+只读护栏已随 [#1](https://github.com/LYsnowQ/CPP_Reactor/issues/1) 实现；配置泄露仍在
+[BACKLOG B-02](./docs/plan/BACKLOG.md) 跟踪。
 
 ---
 
@@ -222,6 +233,9 @@ bash tests/test_smoke.sh http://127.0.0.1:8080/
 
 # HTTP 边界（标准库，无需 venv）
 python3 tests/run_http_cases.py 127.0.0.1 8080
+
+# SQL 端点安全（默认关闭、只读护栏；不需要真实数据库）
+bash tests/test_sql_security.sh
 
 # 静态文件压测（M1-M5 / 梯度）
 bash tests/bench.sh static M

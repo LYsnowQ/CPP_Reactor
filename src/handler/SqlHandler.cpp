@@ -3,6 +3,7 @@
 #include "persistence/ThreadLocalSqlConn.hpp"
 #include "protocol/HttpRequest.hpp"
 #include "utils/StringUtils.hpp"
+#include "utils/SqlStatementGuard.hpp"
 #include "persistence/ISqlConnection.hpp"
 #include "persistence/SqlTypes.hpp"
 #include "core/EventLoop.hpp"
@@ -114,8 +115,8 @@ namespace reactor::handler
     }//namespace
 
 
-    SqlHandler::SqlHandler(std::shared_ptr<persistence::SqlExecutor> executor)
-        : executor_(std::move(executor))
+    SqlHandler::SqlHandler(std::shared_ptr<persistence::SqlExecutor> executor, bool readOnly)
+        : executor_(std::move(executor)), readOnly_(readOnly)
     {}
 
     // ====================================================================
@@ -124,12 +125,13 @@ namespace reactor::handler
     //
     // 1. 方法校验：仅放行 GET，其余返回 405（同步返回）。
     // 2. 提取 SQL：从 URL 提取 ?sql= 参数，缺失返回 400。
-    // 3. 异步标记：result.async = true，告知 TcpConnection 不立即发送响应。
-    // 4. 提交执行：executor_->submit 将 lambda 投递到 SQL 后台线程。
-    // 5. 后台线程中：
+    // 3. 只读护栏：readOnly 模式下拒绝非只读语句（403）。
+    // 4. 异步标记：result.async = true，告知 TcpConnection 不立即发送响应。
+    // 5. 提交执行：executor_->submit 将 lambda 投递到 SQL 后台线程。
+    // 6. 后台线程中：
     //    a. tls.withConnection 获取/创建线程局部数据库连接。
     //    b. db.query(sql, {}) 执行 SQL 查询。
-    // 6. 结果回写：
+    // 7. 结果回写：
     //    a. loop->post 将 lambda 投递回 EventLoop 线程。
     //    b. conn.sendAsyncResponse 在 EventLoop 线程中触发写事件。
     //    c. 若连接已断开（weak_ptr.lock() 返回 null），直接返回。
@@ -153,6 +155,16 @@ namespace reactor::handler
         {
             result.statusCode = 400;
             result.body = R"({"error":"Missing 'sql' query parameter"})";
+            return result;
+        }
+
+        // 只读模式只放行单条 SELECT/SHOW/DESCRIBE/EXPLAIN。
+        // 这是 HTTP 边界的启发式护栏，不是完整 SQL 解析器；
+        // 真正的安全边界仍是只读数据库账号与网络隔离。
+        if(readOnly_ && !reactor::utils::isReadOnlyStatement(sql))
+        {
+            result.statusCode = 403;
+            result.body = R"({"error":"Only read-only statements are allowed"})";
             return result;
         }
 

@@ -37,6 +37,9 @@ jobs:
           bash tests/test_smoke.sh http://127.0.0.1:8080/
           python3 tests/run_http_cases.py 127.0.0.1 8080
 
+      - name: SQL 端点安全用例
+        run: bash tests/test_sql_security.sh
+
       - name: 文档检查
         run: python3 scripts/check_docs.py
 
