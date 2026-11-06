@@ -2,7 +2,8 @@
 
 - 状态：accepted
 - 日期：2026-11-06
-- 相关：[LICENSING.md](../../LICENSING.md)、[LICENSE](../../LICENSE)、[LICENSE-MIT](../../LICENSE-MIT)、
+- 相关：[LICENSING.md](../legal/LICENSING.md)、[LICENSE](../../LICENSE)、
+  [LICENSES/MIT.txt](../../LICENSES/MIT.txt)、
   issue [#5](https://github.com/LYsnowQ/CPP_Reactor/issues/5)
 
 ## 背景
@@ -23,8 +24,8 @@
 1. 从本决策所在提交起，新代码采用 **PolyForm Noncommercial License 1.0.0**；
 2. 增加**免费再分发**的附加许可（任意渠道，含商业平台，不得收费/捆绑付费产品）；
 3. 历史代码（截至 `be3bc0b`，含 tag `v1.0.0`–`v1.2.0`）继续适用 MIT，原文保留为
-   `LICENSE-MIT`；
-4. 在 `LICENSING.md` 中明确“MIT 不可撤回”，不制造错误预期；
+   `LICENSES/MIT.txt`；
+4. 在 `docs/legal/LICENSING.md` 中明确“MIT 不可撤回”，不制造错误预期；
 5. 商业使用需单独授权，通过 GitHub issue 联系。
 
 ## 理由
@@ -48,7 +49,7 @@
 - **不再是 OSI 开源项目**；GitHub 可能显示 “Other/View license”，部分发行版/镜像会拒绝；
 - 已发布的 MIT 副本（包括 `429dcaf`）仍可被商业使用，无法撤回；
 - 可能降低外部贡献意愿；
-- 需要持续维护 `LICENSING.md` 与商业授权沟通。
+- 需要持续维护 `docs/legal/LICENSING.md` 与商业授权沟通。
 
 ## 替代方案
 

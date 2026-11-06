@@ -28,7 +28,9 @@ SKIP_DIRS = {
 SKIP_PREFIXES = ("build-", "cmake-build-")
 
 # 历史材料保持原样：其中的 file:/// 绝对链接与旧路径是当时的记录。
-HISTORICAL = re.compile(r"docs/(iterations/ITERATION_\d+.*\.md|history/PROJECT-LOG\.md)$")
+HISTORICAL = re.compile(
+    r"docs/(history/iterations/ITERATION_\d+.*\.md|history/PROJECT-LOG\.md)$"
+)
 
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")

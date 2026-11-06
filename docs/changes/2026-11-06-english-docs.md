@@ -11,7 +11,7 @@
 ## 交付
 
 - `README.en.md`：与中文 README 对齐的英文版本；
-- `LICENSING.en.md`：英文许可摘要（PolyForm Noncommercial、历史 MIT、免费再分发附加许可、
+- `docs/legal/LICENSING.en.md`：英文许可摘要（PolyForm Noncommercial、历史 MIT、免费再分发附加许可、
   商业授权入口）；
 - 中英文 README / LICENSING 顶部互加语言链接；
 - `docs/INDEX.md` 收录英文入口；

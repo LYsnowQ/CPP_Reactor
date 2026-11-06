@@ -5,7 +5,7 @@
 A C++20 Reactor-pattern HTTP server (learning project)
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
-[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./LICENSING.en.md)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./docs/legal/LICENSING.en.md)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-lightgrey.svg)](#requirements)
 [![CI](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml/badge.svg)](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-2.0.0-informational.svg)](./CHANGELOG.md)
@@ -51,7 +51,7 @@ directory indexes, `/healthz`, and an asynchronous MySQL query demo endpoint bui
 MySQL Connector/C++.
 
 The current version is **2.0.0** (2026-11-06). See [CHANGELOG.md](./CHANGELOG.md) for the
-version history and [docs/iterations/](./docs/iterations/README.md) for the 29 historical
+version history and [docs/history/iterations/](./docs/history/iterations/README.md) for the 29 historical
 iteration notes.
 
 ### Scope
@@ -318,15 +318,15 @@ CPPReactor/
 ├── third_party/        spdlog, nlohmann_json, mysql-cppconn (vendored)
 ├── config/             SQLConfig.json (empty-credentials template)
 ├── tests/              Smoke / edge cases / benchmarks / seeding
-├── docs/               Conventions, architecture, decisions, iterations, history, plan, reviews
+├── docs/               Conventions, architecture, decisions, legal, history, plan, reviews
+│   ├── legal/          License boundaries (Chinese/English)
+│   └── history/        Project log and 29 historical iterations
+├── LICENSES/           Historical MIT text (SPDX layout)
 ├── scripts/            check_docs.py (documentation link checker)
 ├── .github/            CI, issue/PR templates
 ├── AGENTS.md           Entry point for AI agents and contributors
 ├── CHANGELOG.md        Version history
-├── LICENSING.md        License boundaries (Chinese)
-├── LICENSING.en.md     License boundaries (English)
 ├── LICENSE             Current license (PolyForm Noncommercial 1.0.0)
-├── LICENSE-MIT         Historical MIT text (through be3bc0b)
 ├── CMakeLists.txt / Makefile
 ├── Dockerfile / docker-compose.yml / docker-entrypoint.sh
 ├── compile_flags.txt   Cross-platform clangd flags
@@ -361,7 +361,8 @@ The detailed docs are currently written in Chinese; the English README covers th
 | [docs/conventions/](./docs/conventions/README.md) | Mandatory conventions: docs, versioning, Git workflow, testing, review |
 | [docs/architecture/](./docs/architecture/ARCHITECTURE.md) | Architecture, configuration, HTTP API |
 | [docs/decisions/](./docs/decisions/README.md) | Architecture decision records (ADRs) |
-| [docs/iterations/](./docs/iterations/README.md) | 29 historical iteration notes (historical only) |
+| [docs/legal/](./docs/legal/LICENSING.en.md) | License boundaries, free redistribution, commercial licensing |
+| [docs/history/iterations/](./docs/history/iterations/README.md) | 29 historical iteration notes (historical only) |
 | [docs/history/PROJECT-LOG.md](./docs/history/PROJECT-LOG.md) | Original project log (0.1.0–1.2.0) |
 | [docs/plan/BACKLOG.md](./docs/plan/BACKLOG.md) | Migration note for GitHub Issues |
 | [docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md](./docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md) | Documentation/configuration audit and plan |
@@ -380,7 +381,8 @@ License:
   noncommercial). Personal learning, noncommercial research, and **free redistribution** are
   allowed; commercial use requires a separate license.
 - Historical versions (through `be3bc0b`, including tags `v1.0.0`–`v1.2.0`) remain **MIT**;
-  the original text is in [LICENSE-MIT](./LICENSE-MIT).
+  the original text is in [LICENSES/MIT.txt](./LICENSES/MIT.txt).
 - Full boundaries, the additional free-redistribution permission, and commercial licensing:
-  [LICENSING.en.md](./LICENSING.en.md) (English) / [LICENSING.md](./LICENSING.md) (Chinese).
+  [docs/legal/LICENSING.en.md](./docs/legal/LICENSING.en.md) (English) /
+  [docs/legal/LICENSING.md](./docs/legal/LICENSING.md) (Chinese).
 - The MIT grant cannot be revoked: previously published code remains usable under MIT.

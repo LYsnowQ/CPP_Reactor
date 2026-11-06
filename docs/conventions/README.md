@@ -17,7 +17,7 @@
 - [AGENTS.md](../../AGENTS.md)：AI/协作者入口，规定读文档的顺序与硬性约束。
 - [docs/INDEX.md](../INDEX.md)：文档总索引。
 - [docs/architecture/](../architecture/ARCHITECTURE.md)：当前系统事实，不重复规范。
-- [docs/iterations/](../iterations/README.md) 与 [docs/history/](../history/PROJECT-LOG.md)：
+- [docs/history/iterations/](../history/iterations/README.md) 与 [docs/history/](../history/PROJECT-LOG.md)：
   历史材料，不作为现行操作依据。
 
 ## 规范的效力

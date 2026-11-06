@@ -13,10 +13,15 @@
 | [README.en.md](../README.en.md) | English README: overview, quick start, configuration, API, license |
 | [AGENTS.md](../AGENTS.md) | AI / 协作者进入仓库的必读入口与硬性约束 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录（SemVer） |
-| [LICENSING.md](../LICENSING.md) | 许可边界、附加免费再分发许可、商业授权说明 |
-| [LICENSING.en.md](../LICENSING.en.md) | English licensing summary |
 | [LICENSE](../LICENSE) | 现行许可：PolyForm Noncommercial 1.0.0 |
-| [LICENSE-MIT](../LICENSE-MIT) | 历史 MIT 原文（截至 `be3bc0b`） |
+
+## legal/ — 许可与合规
+
+| 文档 | 说明 |
+|------|------|
+| [LICENSING](legal/LICENSING.md) | 许可边界、附加免费再分发许可、商业授权说明 |
+| [LICENSING.en](legal/LICENSING.en.md) | English licensing summary |
+| [LICENSES/MIT.txt](../LICENSES/MIT.txt) | 历史 MIT 原文（截至 `be3bc0b`） |
 
 ## conventions/ — 强制规范
 
@@ -70,21 +75,17 @@
 | [2026-11-06 管理转型](changes/2026-11-06-management-transition.md) | issue-first、PR 流程、GitHub Issues 成为唯一待办主档 |
 | [2026-11-06 发布 2.0.0](changes/2026-11-06-release-2.0.0.md) | 版本号、Breaking Changes、tag 与 Release |
 | [2026-11-06 英文文档](changes/2026-11-06-english-docs.md) | 英文 README / 许可摘要与中英文互链 |
+| [2026-11-06 根目录整理](changes/2026-11-06-repo-layout.md) | 法律/历史材料分层，根目录只保留标准入口 |
 
-## iterations/ — 迭代历史（只读）
-
-| 文档 | 说明 |
-|------|------|
-| [README](iterations/README.md) | 29 次迭代的索引与阅读须知 |
-
-单篇文件为 `ITERATION_01_*.md` … `ITERATION_29_*.md`，从
-[iterations/README](iterations/README.md) 进入。**历史材料，不代表当前实现。**
-
-## history/ — 原始记录（只读）
+## history/ — 历史材料（只读）
 
 | 文档 | 说明 |
 |------|------|
 | [PROJECT-LOG](history/PROJECT-LOG.md) | 2026-04-21 至 2026-06-19 的原始开发流水 |
+| [iterations/README](history/iterations/README.md) | 29 次迭代的索引与阅读须知 |
+
+单篇迭代为 `history/iterations/ITERATION_01_*.md` … `ITERATION_29_*.md`，从
+[iterations/README](history/iterations/README.md) 进入。**历史材料，不代表当前实现。**
 
 ## tests/ — 测试说明
 

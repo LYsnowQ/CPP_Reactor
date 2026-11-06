@@ -7,7 +7,7 @@
 ## 1. 现行许可（从本文件所在提交起）
 
 - 许可证：**PolyForm Noncommercial License 1.0.0**
-- 全文：[LICENSE](./LICENSE)
+- 全文：[LICENSE](../../LICENSE)
 - 首个正式版本：`v2.0.0`（2026-11-06）
 - 附加许可：允许**免费再分发**（见 §4）
 
@@ -23,7 +23,7 @@ PolyForm Noncommercial 1.0.0 是**源码可见（source-available）**许可，�
 
 `v2.0.0` 起适用 PolyForm Noncommercial；它不回溯改变上述 MIT 版本。
 
-MIT 原文保留在 [LICENSE-MIT](./LICENSE-MIT)。
+MIT 原文保留在 [LICENSES/MIT.txt](../../LICENSES/MIT.txt)。
 
 **更改许可证不会撤回已经授予的 MIT 权利。** 任何人在 MIT 有效期内获得的副本，仍可按 MIT
 使用（包括商业使用）。因此：
@@ -50,7 +50,7 @@ MIT 原文保留在 [LICENSE-MIT](./LICENSE-MIT)。
 
 1. 不因本软件本身或访问本软件收取任何费用；
 2. 不把本软件捆绑进付费产品、付费服务或付费订阅；
-3. 随副本保留 [LICENSE](./LICENSE) 与本文件，并保留作者署名与仓库出处。
+3. 随副本保留 [LICENSE](../../LICENSE) 与本文件，并保留作者署名与仓库出处。
 
 该附加许可**只覆盖再分发**，不构成对商业使用的授权。若分发行为本身被用作付费产品的
 获客手段，请先取得商业授权。
@@ -70,13 +70,13 @@ MIT 原文保留在 [LICENSE-MIT](./LICENSE-MIT)。
 ## 6. 免责声明
 
 软件按“现状”提供，不附带任何明示或默示担保。许可人不对使用本软件产生的任何损害负责，
-详情以 [LICENSE](./LICENSE) 的 *No Liability* 条款为准。
+详情以 [LICENSE](../../LICENSE) 的 *No Liability* 条款为准。
 
 ## 7. 与其他文件的关系
 
 | 文件 | 作用 |
 |------|------|
-| [LICENSE](./LICENSE) | 现行 PolyForm Noncommercial 1.0.0 全文 |
-| [LICENSE-MIT](./LICENSE-MIT) | 历史 MIT 全文（截至 `be3bc0b`） |
+| [LICENSE](../../LICENSE) | 现行 PolyForm Noncommercial 1.0.0 全文 |
+| [LICENSES/MIT.txt](../../LICENSES/MIT.txt) | 历史 MIT 全文（截至 `be3bc0b`） |
 | 本文件 | 版本边界、附加许可、商业授权说明 |
-| [docs/decisions/0004-license-noncommercial.md](./docs/decisions/0004-license-noncommercial.md) | 变更原因、替代方案与后果 |
+| [docs/decisions/0004-license-noncommercial.md](../decisions/0004-license-noncommercial.md) | 变更原因、替代方案与后果 |
