@@ -59,6 +59,8 @@
 - 版本记录从流水日志迁移到本文件；历史版本补打本地 tag（未推送）。
 - 新增 [p0/p1 修复记录](./docs/changes/2026-11-06-p0-p1-fixes.md)；BACKLOG 关闭 B-01–B-04。
 - 新增 [许可变更记录](./docs/changes/2026-11-06-license-change.md) 与 ADR-0004。
+- 新增 [管理转型记录](./docs/changes/2026-11-06-management-transition.md)：GitHub Issues 成为唯一
+  待办主档，非平凡改动走 PR；BACKLOG 只保留迁移说明。
 
 ## [1.2.0] - 2026-06-19
 

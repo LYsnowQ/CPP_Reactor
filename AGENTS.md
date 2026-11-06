@@ -12,7 +12,7 @@
    - 启动参数、配置 → [docs/architecture/CONFIGURATION.md](./docs/architecture/CONFIGURATION.md)
    - 路由、状态码 → [docs/architecture/HTTP-API.md](./docs/architecture/HTTP-API.md)
    - 模块、线程、扩展点 → [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md)
-   - 已知问题 → [docs/plan/BACKLOG.md](./docs/plan/BACKLOG.md)
+   - 已知问题 → [GitHub Issues](https://github.com/LYsnowQ/CPP_Reactor/issues)（本地 BACKLOG 仅保留迁移说明）
 
 ## 2. 项目事实速览
 
@@ -39,13 +39,13 @@
 ## 4. 改动流程
 
 1. `git status` + `git branch --show-current`，确认工作区干净、所在分支正确；
-2. 非平凡改动先在 BACKLOG 查重，必要时开 issue；
+2. 非平凡改动先搜索 GitHub Issues 查重，必要时开 issue；
 3. 从 `main` 切分支：`fix/<issue>-<slug>`、`feat/<slug>`、`docs/<slug>`；
 4. 改代码 → 同步受影响的文档（见 DOCUMENTATION 的新鲜度表）；
 5. 跑编译 + 冒烟 + HTTP 用例 + 文档检查；
 6. 更新 `CHANGELOG.md` 的 `[Unreleased]`；
 7. 提交：`type(scope): 目的`，正文写“为什么 + 验证方式”；
-8. 合并回 `main`（squash），删除分支。
+8. 推送分支并开 PR（正文 `Closes #N`），CI 通过后 squash 合并、删除分支。
 
 ## 5. 已知陷阱
 
@@ -67,7 +67,7 @@
 |------|------|
 | 面向使用者的变更 | `CHANGELOG.md` |
 | 非平凡改动的过程与验证 | `docs/changes/YYYY-MM-DD-<slug>.md` |
-| 尚未完成的缺口 | `docs/plan/BACKLOG.md` |
+| 尚未完成的缺口 | GitHub Issues（`docs/plan/BACKLOG.md` 仅保留迁移说明） |
 | 架构选型 | `docs/decisions/` |
 | 审计/验收证据 | `docs/reviews/` |
 | 历次迭代 | `docs/iterations/`（只读） |

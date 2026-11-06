@@ -17,7 +17,8 @@
 > 本项目是个人 C++ 网络编程学习项目，用于实践 Reactor 多线程模型、HTTP 协议解析、
 > 连接生命周期管理和 MySQL 异步查询。**它不是生产级服务器**：
 > 没有 TLS、没有鉴权，`/sql` 端点默认关闭；显式开启后默认只允许只读语句，
-> 但服务整体仍不适合公网。请不要把本服务直接暴露到公网。详见[安全边界](#安全边界)与[已知问题](./docs/plan/BACKLOG.md)。
+> 但服务整体仍不适合公网。请不要把本服务直接暴露到公网。详见[安全边界](#安全边界)与
+> [GitHub Issues](https://github.com/LYsnowQ/CPP_Reactor/issues)。
 
 ## 目录
 
@@ -342,7 +343,7 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
 | [docs/decisions/](./docs/decisions/README.md) | 架构决策记录（ADR） |
 | [docs/iterations/](./docs/iterations/README.md) | 29 次迭代的历史记录（仅供追溯） |
 | [docs/history/PROJECT-LOG.md](./docs/history/PROJECT-LOG.md) | 原始项目日志（0.1.0–1.2.0） |
-| [docs/plan/BACKLOG.md](./docs/plan/BACKLOG.md) | 已知问题与排期 |
+| [docs/plan/BACKLOG.md](./docs/plan/BACKLOG.md) | 已迁移到 GitHub Issues 的说明与迁移记录 |
 | [docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md](./docs/reviews/2026-11-06-NORMALIZATION-AUDIT.md) | 本次文档/配置规范化的审计与方案 |
 | [AGENTS.md](./AGENTS.md) | AI/协作者进入仓库的第一步 |
 
