@@ -32,8 +32,8 @@ make clean && make -j$(nproc)
 # 3. 冒烟测试
 bash tests/test_smoke.sh http://127.0.0.1:8080/
 
-# 4. HTTP 边界测试
-tests/.venv/bin/python3 tests/run_http_cases.py 127.0.0.1 8080
+# 4. HTTP 边界测试（仅标准库，无需虚拟环境）
+python3 tests/run_http_cases.py 127.0.0.1 8080
 
 # 5. HTTP 静态文件压测
 bash tests/bench.sh static M
@@ -54,7 +54,7 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 
 | 文件 | 说明 |
 |------|------|
-| `setup.sh` | 创建 Python 3.12 虚拟环境到 `tests/.venv/` 并安装依赖 |
+| `setup.sh` | 优先使用 `python3.12`，否则 `python3`；会删除并重建 `tests/.venv/` 后安装依赖 |
 | `requirements.txt` | pip 依赖声明，当前仅 `pymysql` |
 
 ### 功能测试
@@ -64,6 +64,12 @@ bash tests/setup.sh && tests/.venv/bin/python3 tests/seed_data.py
 | `test_smoke.sh` | curl | 快速确认服务是否可访问，检查 HTTP 返回码 |
 | `run_http_cases.py` | socket | 覆盖 413 大包、分片请求、非法请求等边缘情况 |
 | `seed_data.py` | pymysql | 向 MySQL users 表插入 5 万行测试数据 |
+
+> `run_http_cases.py` 当前覆盖 4 条路径：合法 GET、非法请求行、超 1 MB 体积（413）、
+> `Content-Length` 分片 Body。Keep-Alive 超时、408、403、405、SQL 错误路径尚未覆盖，
+> 见 [BACKLOG B-09](../docs/plan/BACKLOG.md)。
+>
+> 服务端返回 413 后可能立即关闭连接，客户端会先收到 RST；用例会保留 RST 之前已读到的字节。
 
 ### 性能压测
 

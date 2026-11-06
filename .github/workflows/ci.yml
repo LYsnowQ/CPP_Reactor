@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Make + 冒烟 + HTTP 用例 + 文档
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装工具
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends make g++ curl python3
+
+      - name: 编译（Make）
+        run: make -j"$(nproc)"
+
+      - name: 启动服务并执行测试
+        run: |
+          set -euo pipefail
+          ./build/main_run 8080 . epoll 4 keepalive 100 10000 > server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:8080/healthz
+          bash tests/test_smoke.sh http://127.0.0.1:8080/
+          python3 tests/run_http_cases.py 127.0.0.1 8080
+
+      - name: 文档检查
+        run: python3 scripts/check_docs.py
+
+      - name: 失败时保留服务日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log
+          path: server.log
+          if-no-files-found: ignore
+
+  cmake-build:
+    name: CMake 构建
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装工具
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake g++ make
+
+      - name: 配置与构建
+        run: |
+          cmake -S . -B build-cmake -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-cmake -j"$(nproc)"
+          test -x build-cmake/main_run
+          test -x build-cmake/main_echo

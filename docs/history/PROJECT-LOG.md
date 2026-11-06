@@ -1,4 +1,14 @@
-# CPPReactor 项目日志
+# CPPReactor 项目日志（历史）
+
+> **历史材料，仅供追溯。** 本文件是 2026-04-21 至 2026-06-19 的开发流水，记录的是当时的
+> 版本号、路径与结论；其中 `scripts/`、`adapter/`、Conan 等已不存在，部分“已完成”的表述
+> 也可能与当前代码不一致（例如 `asyncPending_` 实际仍存在）。
+>
+> - 现行版本记录：[CHANGELOG.md](../../CHANGELOG.md)
+> - 现行架构事实：[docs/architecture/](../architecture/ARCHITECTURE.md)
+> - 逐次迭代记录：[docs/iterations/](../iterations/README.md)
+>
+> 原文件名 `项目日志.md`，2026-11-06 规范化为英文路径并保留原文。
 
 ## 2026-04-21 12:20:44 
 

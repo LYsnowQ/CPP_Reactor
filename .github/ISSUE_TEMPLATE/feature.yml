@@ -1,0 +1,62 @@
+name: 功能 / 改进
+description: 新能力、重构、构建或文档改进
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先确认它符合 [PROJECT.md](https://github.com/LYsnowQ/CPP_Reactor/blob/main/docs/conventions/PROJECT.md) 的定位；
+        若属于 BACKLOG 已有条目，请直接引用 ID（如 B-08）。
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+      description: 要解决什么问题？一句话说明，不写实现方案。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 方案要点
+      description: 接口/配置/数据结构会怎么变？是否需要 ADR？
+    validations:
+      required: true
+
+  - type: textarea
+    id: docs
+    attributes:
+      label: 受影响的文档
+      description: 按 [DOCUMENTATION 新鲜度表](https://github.com/LYsnowQ/CPP_Reactor/blob/main/docs/conventions/DOCUMENTATION.md#5-新鲜度改代码时必须同步什么) 列出需要同步的文件。
+      placeholder: "docs/architecture/CONFIGURATION.md、README、CHANGELOG"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收条件
+      description: 可执行的检查项，而不是“感觉可用”。
+      placeholder: |
+        - [ ] make 零警告
+        - [ ] 新增用例 X 通过
+        - [ ] 文档已更新
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 区域
+      options:
+        - core
+        - net
+        - http
+        - sql
+        - build/docker
+        - docs
+        - test
+    validations:
+      required: true

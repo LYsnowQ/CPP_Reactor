@@ -1,0 +1,58 @@
+name: Bug 报告
+description: 报告可复现的缺陷（崩溃、挂起、错误状态码、构建失败等）
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先在 [BACKLOG](https://github.com/LYsnowQ/CPP_Reactor/blob/main/docs/plan/BACKLOG.md) 检索是否已有条目。
+        安全相关（任意 SQL、凭据泄露）请先读 [HTTP-API 安全边界](https://github.com/LYsnowQ/CPP_Reactor/blob/main/docs/architecture/HTTP-API.md#6-安全边界必须遵守)。
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 现象
+      description: 实际发生了什么？包含状态码、日志、超时时间。
+      placeholder: "例：/sql 在数据库不可达时 8 秒无响应，日志出现 SqlExecutor job failed"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 可直接复制执行的命令与环境。
+      placeholder: |
+        环境：WSL2 Ubuntu 22.04 / g++ 11.4 / commit abc1234
+        1. make clean && make -j8
+        2. ./build/main_run 8080 . epoll 4 close
+        3. curl --max-time 8 'http://127.0.0.1:8080/sql?sql=SELECT%201'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 依据哪份文档/协议？若文档本身有误，请指出。
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影响范围
+      description: 哪些功能/路径受影响？是否涉及安全或数据？
+      placeholder: "例：仅 /sql；静态文件不受影响；不会写库"
+    validations:
+      required: true
+
+  - type: textarea
+    id: verify
+    attributes:
+      label: 修复后的验收方式
+      description: 用什么命令/用例证明已修复？
+      placeholder: "例：DB 不可达时 5 秒内返回 500，新增端到端用例"
+    validations:
+      required: true
