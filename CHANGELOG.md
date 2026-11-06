@@ -28,6 +28,8 @@
 
 ### Changed
 
+- 许可证从 MIT 改为 **PolyForm Noncommercial 1.0.0**（#5）：新增 `LICENSING.md` 与
+  `LICENSE-MIT`；历史版本继续 MIT，允许免费再分发，商业使用需单独授权。
 - 文档目录重组：`docs/ITERATION_*.md` → `docs/iterations/`；`项目日志.md` →
   `docs/history/PROJECT-LOG.md`。
 - 重写 `README.md`：修正过期的 Conan 说明、迭代数量、项目结构，补充安全边界与文档导航。
@@ -56,6 +58,7 @@
 - 历史文档显式标注“仅供追溯”，并说明其中的失效路径与结论不再作为操作依据。
 - 版本记录从流水日志迁移到本文件；历史版本补打本地 tag（未推送）。
 - 新增 [p0/p1 修复记录](./docs/changes/2026-11-06-p0-p1-fixes.md)；BACKLOG 关闭 B-01–B-04。
+- 新增 [许可变更记录](./docs/changes/2026-11-06-license-change.md) 与 ADR-0004。
 
 ## [1.2.0] - 2026-06-19
 

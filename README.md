@@ -5,7 +5,7 @@
 高性能 C++20 Reactor 模式 HTTP 服务器（学习项目）
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](#许可证)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./LICENSING.md)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-lightgrey.svg)](#环境要求)
 [![CI](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml/badge.svg)](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.2.0-informational.svg)](./CHANGELOG.md)
@@ -306,6 +306,9 @@ CPPReactor/
 ├── .github/            CI、Issue/PR 模板
 ├── AGENTS.md           AI/协作者入口
 ├── CHANGELOG.md        版本记录
+├── LICENSING.md        许可边界、附加许可与商业授权
+├── LICENSE             现行许可（PolyForm Noncommercial 1.0.0）
+├── LICENSE-MIT         历史 MIT 原文（截至 be3bc0b）
 ├── CMakeLists.txt / Makefile
 ├── Dockerfile / docker-compose.yml / docker-entrypoint.sh
 ├── compile_flags.txt   clangd 的跨平台编译参数
@@ -350,4 +353,11 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
 当前版本 **1.2.0**。版本号遵循 SemVer，唯一事实来源是 git tag + [CHANGELOG.md](./CHANGELOG.md)，
 规则见 [docs/conventions/VERSIONING.md](./docs/conventions/VERSIONING.md)。
 
-本项目基于 MIT 许可证开源，详见 [LICENSE](./LICENSE)。
+许可：
+
+- 从 2026-11-06 起的新代码采用 **PolyForm Noncommercial 1.0.0**（非商业、源码可见），
+  允许个人学习、非商业研究与**免费再分发**；商业使用需单独授权；
+- 历史版本（截至 `be3bc0b`，含 tag `v1.0.0`–`v1.2.0`）仍为 **MIT**，原文见
+  [LICENSE-MIT](./LICENSE-MIT)；
+- 完整边界、附加许可与商业授权方式见 [LICENSING.md](./LICENSING.md)；
+- MIT 授权不可撤回：已发布的旧代码仍可按 MIT 使用。

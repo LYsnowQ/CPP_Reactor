@@ -12,7 +12,9 @@
 | [README.md](../README.md) | 项目介绍、快速开始、配置/接口入口、文档导航 |
 | [AGENTS.md](../AGENTS.md) | AI / 协作者进入仓库的必读入口与硬性约束 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录（SemVer） |
-| [LICENSE](../LICENSE) | MIT 许可证 |
+| [LICENSING.md](../LICENSING.md) | 许可边界、附加免费再分发许可、商业授权说明 |
+| [LICENSE](../LICENSE) | 现行许可：PolyForm Noncommercial 1.0.0 |
+| [LICENSE-MIT](../LICENSE-MIT) | 历史 MIT 原文（截至 `be3bc0b`） |
 
 ## conventions/ — 强制规范
 
@@ -42,12 +44,13 @@
 | [0001](decisions/0001-reactor-multi-dispatcher.md) | Reactor 多线程 + epoll 默认 + 多后端 |
 | [0002](decisions/0002-vendored-third-party.md) | 第三方库自包含，移除 Conan |
 | [0003](decisions/0003-sql-endpoint-demo-only.md) | `/sql` 仅作演示端点，带安全技术债 |
+| [0004](decisions/0004-license-noncommercial.md) | 改为 PolyForm Noncommercial，历史 MIT 保留，免费再分发附加许可 |
 
 ## plan/ — 计划与待办
 
 | 文档 | 说明 |
 |------|------|
-| [BACKLOG](plan/BACKLOG.md) | 12 条已知问题：安全、挂起、配置、Docker、测试等 |
+| [BACKLOG](plan/BACKLOG.md) | 8 条已知问题：Docker、停机、日志、静态文件、测试等 |
 
 ## reviews/ — 审计与验收
 
@@ -61,6 +64,7 @@
 |------|------|
 | [2026-11-06 文档规范化](changes/2026-11-06-docs-normalization.md) | 本次结构迁移、修复项、验证证据、未完成事项 |
 | [2026-11-06 p0/p1 修复](changes/2026-11-06-p0-p1-fixes.md) | issue #1–#4 的实现、验证与遗留 |
+| [2026-11-06 许可变更](changes/2026-11-06-license-change.md) | 改为非商业许可、历史 MIT 边界、XERJ 收录请求的处置 |
 
 ## iterations/ — 迭代历史（只读）
 

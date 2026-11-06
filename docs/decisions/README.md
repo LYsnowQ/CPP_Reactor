@@ -7,6 +7,7 @@
 | [0001](./0001-reactor-multi-dispatcher.md) | 采用 Reactor 多线程 + epoll 默认，保留 poll/select 后端 | accepted |
 | [0002](./0002-vendored-third-party.md) | 第三方库自包含于 `third_party/`，不使用 Conan/系统包 | accepted |
 | [0003](./0003-sql-endpoint-demo-only.md) | `/sql` 仅作为演示端点保留，不承诺安全与稳定 | accepted（带技术债） |
+| [0004](./0004-license-noncommercial.md) | 改为 PolyForm Noncommercial 1.0.0，历史 MIT 保留 | accepted |
 
 ## 约定
 
