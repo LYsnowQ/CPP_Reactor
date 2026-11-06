@@ -12,6 +12,8 @@
 
 </div>
 
+[简体中文](README.md) | [English](README.en.md)
+
 > **定位声明**
 >
 > 本项目是个人 C++ 网络编程学习项目，用于实践 Reactor 多线程模型、HTTP 协议解析、
@@ -306,8 +308,11 @@ CPPReactor/
 ├── scripts/            check_docs.py（文档链接检查）
 ├── .github/            CI、Issue/PR 模板
 ├── AGENTS.md           AI/协作者入口
+├── README.md           中文 README
+├── README.en.md        English README
 ├── CHANGELOG.md        版本记录
 ├── LICENSING.md        许可边界、附加许可与商业授权
+├── LICENSING.en.md     Licensing summary (English)
 ├── LICENSE             现行许可（PolyForm Noncommercial 1.0.0）
 ├── LICENSE-MIT         历史 MIT 原文（截至 be3bc0b）
 ├── CMakeLists.txt / Makefile
@@ -360,5 +365,5 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
   允许个人学习、非商业研究与**免费再分发**；商业使用需单独授权；
 - 历史版本（截至 `be3bc0b`，含 tag `v1.0.0`–`v1.2.0`）仍为 **MIT**，原文见
   [LICENSE-MIT](./LICENSE-MIT)；
-- 完整边界、附加许可与商业授权方式见 [LICENSING.md](./LICENSING.md)；
+- 完整边界、附加许可与商业授权方式见 [LICENSING.md](./LICENSING.md)（[English](./LICENSING.en.md)）；
 - MIT 授权不可撤回：已发布的旧代码仍可按 MIT 使用。
