@@ -13,7 +13,9 @@ def send_raw(host: str, port: int, payload: bytes, timeout: float = 3.0) -> byte
         while True:
             try:
                 data = sock.recv(4096)
-            except socket.timeout:
+            except (socket.timeout, ConnectionResetError):
+                # 服务端拒绝超大请求体时可能在客户端发完前关闭连接，
+                # 已收到的响应字节仍然有效（例如 413），不能因 RST 丢弃。
                 break
             if not data:
                 break
@@ -31,7 +33,7 @@ def send_split(host: str, port: int, p1: bytes, p2: bytes, gap_sec: float = 0.2,
         while True:
             try:
                 data = sock.recv(4096)
-            except socket.timeout:
+            except (socket.timeout, ConnectionResetError):
                 break
             if not data:
                 break
@@ -87,11 +89,13 @@ def run(host: str, port: int) -> int:
             "expect": 413,
         },
         {
+            # GET 带请求体同样走增量解析；用 "/"（目录索引）验证分片 body
+            # 解析完成后仍能正常分派并返回 200。
             "name": "split_content_length_body",
             "run": lambda: send_split(
                 host,
                 port,
-                b"POST /x HTTP/1.1\r\nHost: local\r\nContent-Length: 10\r\n\r\n12345",
+                b"GET / HTTP/1.1\r\nHost: local\r\nContent-Length: 10\r\n\r\n12345",
                 b"67890",
             ),
             "expect": 200,
