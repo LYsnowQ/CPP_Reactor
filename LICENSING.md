@@ -6,6 +6,7 @@
 
 - 许可证：**PolyForm Noncommercial License 1.0.0**
 - 全文：[LICENSE](./LICENSE)
+- 首个正式版本：`v2.0.0`（2026-11-06）
 - 附加许可：允许**免费再分发**（见 §4）
 
 PolyForm Noncommercial 1.0.0 是**源码可见（source-available）**许可，不是 OSI 定义的开源许可。
@@ -17,6 +18,8 @@ PolyForm Noncommercial 1.0.0 是**源码可见（source-available）**许可，�
 
 - 截至 commit `be3bc0b`（含）的全部提交；
 - tag `v1.0.0`、`v1.1.0`、`v1.2.0`。
+
+`v2.0.0` 起适用 PolyForm Noncommercial；它不回溯改变上述 MIT 版本。
 
 MIT 原文保留在 [LICENSE-MIT](./LICENSE-MIT)。
 

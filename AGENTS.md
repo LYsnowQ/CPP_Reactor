@@ -23,7 +23,7 @@
 - 测试：`bash tests/test_smoke.sh http://127.0.0.1:8080/`、
   `python3 tests/run_http_cases.py 127.0.0.1 8080`、
   `bash tests/test_sql_security.sh`、`python3 scripts/check_docs.py`。
-- 版本：`1.2.0`，版本记录在 [CHANGELOG.md](./CHANGELOG.md)；tag 未推送。
+- 版本：`2.0.0`，版本记录在 [CHANGELOG.md](./CHANGELOG.md)；`v1.0.0`–`v2.0.0` tag 已推送。
 
 ## 3. 硬性约束（违反即退回）
 

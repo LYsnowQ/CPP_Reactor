@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](./LICENSING.md)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-lightgrey.svg)](#环境要求)
 [![CI](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml/badge.svg)](https://github.com/LYsnowQ/CPP_Reactor/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.2.0-informational.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-informational.svg)](./CHANGELOG.md)
 
 </div>
 
@@ -44,7 +44,7 @@ CPPReactor 从零实现了一个 C++20 的 HTTP/1.1 服务器：主线程 `accep
 `EventLoop`，事件分发后端可在 **epoll / poll / select** 之间通过命令行参数切换；业务侧提供
 静态文件服务、目录索引、健康检查，以及一个基于 MySQL Connector/C++ 的异步 SQL 查询演示端点。
 
-项目当前版本 **1.2.0**（2026-06-19），已走完从 C 风格原型到 C++20 分层的演进，版本记录见
+项目当前版本 **2.0.0**（2026-11-06），已走完从 C 风格原型到 C++20 分层的演进，版本记录见
 [CHANGELOG.md](./CHANGELOG.md)，每次迭代的技术记录见 [docs/iterations/](./docs/iterations/README.md)。
 
 ### 适用范围
@@ -351,7 +351,7 @@ Echo 与 HTTP 的约 29 倍差距主要来自 HTTP 解析、字符串与文件 I
 
 ## 版本与许可
 
-当前版本 **1.2.0**。版本号遵循 SemVer，唯一事实来源是 git tag + [CHANGELOG.md](./CHANGELOG.md)，
+当前版本 **2.0.0**。版本号遵循 SemVer，唯一事实来源是 git tag + [CHANGELOG.md](./CHANGELOG.md)，
 规则见 [docs/conventions/VERSIONING.md](./docs/conventions/VERSIONING.md)。
 
 许可：

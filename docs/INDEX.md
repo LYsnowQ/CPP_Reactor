@@ -66,6 +66,7 @@
 | [2026-11-06 p0/p1 修复](changes/2026-11-06-p0-p1-fixes.md) | issue #1–#4 的实现、验证与遗留 |
 | [2026-11-06 许可变更](changes/2026-11-06-license-change.md) | 改为非商业许可、历史 MIT 边界、XERJ 收录请求的处置 |
 | [2026-11-06 管理转型](changes/2026-11-06-management-transition.md) | issue-first、PR 流程、GitHub Issues 成为唯一待办主档 |
+| [2026-11-06 发布 2.0.0](changes/2026-11-06-release-2.0.0.md) | 版本号、Breaking Changes、tag 与 Release |
 
 ## iterations/ — 迭代历史（只读）
 
