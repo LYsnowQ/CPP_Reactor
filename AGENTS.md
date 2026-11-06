@@ -55,7 +55,7 @@
 | 在非仓库根目录启动 | 配置按启动时工作目录解析，会找不到 `config/SQLConfig.json` |
 | 以为 `/sql` 默认可用 | 默认不注册，需要追加 `--enable-sql` |
 | 以为 `--enable-sql` 就等于安全 | `readOnly` 只提供启发式语句护栏，仍需只读数据库账号与网络隔离 |
-| 以为 `/sql` 出错会返回 500 | 数据库连接失败会挂起；见 BACKLOG B-03 |
+| 以为 `/sql` 出错不会回包 | 连接失败已回写 500、执行器停止回 503；见 `tests/test_sql_security.sh` |
 | 以为 CMake 与 Make 等价 | CMake 的 `main_echo` 曾漏链 MySQL 库（已修）；改构建时两边都验证 |
 | 以为静态根只服务静态文件 | `config/`/`.git`/点文件已拒绝，但其他源码与文档仍可下载 |
 | 直接改历史迭代文档 | 历史材料不改写；新结论写进 `docs/reviews/` 或 `docs/architecture/` |

@@ -40,7 +40,7 @@ app/            入口、参数解析、依赖装配
 | protocol | `HttpRouter` | 方法 + 精确路径 + `:param` + 前缀匹配，未匹配 404 | 连接线程 |
 | handler | `StaticFileHandler` | GET 文件/目录索引、`/healthz`、路径穿越防护 | 连接线程 |
 | handler | `SqlHandler` | `GET /query|/sql?sql=`（仅 `--enable-sql` 注册），提交后台执行，异步回写 | 连接线程 + SQL 线程 |
-| persistence | `SqlExecutor` | 单工作线程 + 任务队列，异常只记日志 | 后台线程 |
+| persistence | `SqlExecutor` | 单工作线程 + 任务队列；job 异常由 `SqlHandler` 捕获并回写 500 | 后台线程 |
 | persistence | `ThreadLocalSingleConn` | 每线程一个连接，按生命周期/空闲/ping 重建 | 使用线程 |
 | persistence | `MySqlConnection` | JDBC Connector/C++ 连接、query、事务 | 使用线程 |
 | observability | `Metrics` | 原子计数器与快照 | 任意线程 |

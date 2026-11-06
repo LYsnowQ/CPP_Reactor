@@ -86,6 +86,10 @@ check_sql "write_drop"        "DROP TABLE users" 403
 check_sql "write_update"      "update users set name='x'" 403
 check_sql "multi_statement"   "SELECT 1; DROP TABLE users" 403
 check_sql "comment_prefix"    "/* x */ DROP TABLE users" 403
+# 数据库不可达：必须回 500，不能挂起；连续 3 次验证工作线程未卡死。
+check_sql "select_db_down_1"  "SELECT 1" 500
+check_sql "select_db_down_2"  "SELECT 1" 500
+check_sql "select_db_down_3"  "SELECT 1" 500
 
 code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${PORT}/sql" || true)"
 if [[ "${code}" == "400" ]]; then

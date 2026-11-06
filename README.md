@@ -162,8 +162,7 @@ SQL 端点默认**不注册**，普通静态服务不需要数据库，也不会
 > `readOnly: true`（模板默认）时只允许单条 `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`；
 > 写语句返回 403。设置 `readOnly: false` 会允许任意 SQL，启动日志会给出警告。
 >
-> ⚠️ 当前数据库不可达时，`/sql` 请求会**一直挂起**而不是返回错误（已记录为
-> [BACKLOG B-03](./docs/plan/BACKLOG.md) / issue [#3](https://github.com/LYsnowQ/CPP_Reactor/issues/3)）。
+> 数据库不可达或连接失败时返回 500，不会挂起；SQL 执行器已停止时返回 503。
 
 ---
 

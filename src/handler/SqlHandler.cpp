@@ -112,6 +112,31 @@ namespace reactor::handler
             }
             return j.dump(2);
         }
+
+        // 异步失败也必须回包：连接失败、ping 失败等异常在 SqlExecutor
+        // 工作线程被捕获后，通过 EventLoop::post 回到连接线程写 500。
+        void postSqlError_(core::EventLoop *loop,
+                           std::weak_ptr<net::TcpConnection> weakConn,
+                           std::string message)
+        {
+            loop->post([weakConn, message = std::move(message)]()
+            {
+                auto conn = weakConn.lock();
+                if(!conn)
+                {
+                    return;
+                }
+
+                net::TcpConnection::HandlerResult resp;
+                resp.contentType = "application/json; charset=utf-8";
+                resp.statusCode = 500;
+                nlohmann::json err;
+                err["error"] = "SQL query failed";
+                err["message"] = message;
+                resp.body = err.dump();
+                conn->sendAsyncResponse(resp);
+            });
+        }
     }//namespace
 
 
@@ -176,53 +201,74 @@ namespace reactor::handler
         // 使用 weak_ptr 防止连接在 SQL 查询完成前已断开。
         // lock() 返回 null 时说明连接已销毁，跳过回写。
         std::weak_ptr<net::TcpConnection> weakConn = conn.shared_from_this();
-        
-        executor_->submit(
+
+        const bool submitted = executor_->submit(
                 [sql = std::move(sql),loop,weakConn]
                 (persistence::ThreadLocalSingleConn &tls)
                 {
-                    auto sqlResult = tls.withConnection(
-                            [&sql]
-                            (persistence::ISqlConnection &db)
-                            {
-                                return db.query(sql, {});
-                            }
+                    try
+                    {
+                        auto sqlResult = tls.withConnection(
+                                [&sql]
+                                (persistence::ISqlConnection &db)
+                                {
+                                    return db.query(sql, {});
+                                }
+                            );
+                        // 通过 EventLoop::post 将结果回写到正确的线程。
+                        // SqlExecutor 的工作线程不能直接操作 TcpConnection 或 Channel。
+                        loop->post(
+                                [weakConn,sqlResult = std::move(sqlResult)]
+                                ()
+                                {
+                                    // 连接已断开，跳过响应回写。
+                                    auto conn = weakConn.lock();
+                                    if(!conn)
+                                    {
+                                        return;
+                                    }
+
+                                    net::TcpConnection::HandlerResult resp;
+                                    resp.contentType = "application/json; charset=utf-8";
+                                    if(sqlResult.ok)
+                                    {
+                                        resp.statusCode = 200;
+                                        resp.body = formatRowsToJson_(sqlResult.value.value());
+                                    }
+                                    else
+                                    {
+                                        resp.statusCode = 500;
+                                        nlohmann::json err;
+                                        err["error"] = "SQL query failed";
+                                        err["message"] = sqlResult.err.message;
+                                        resp.body = err.dump();
+                                    }
+
+                                    conn->sendAsyncResponse(resp);
+                                }
+
                         );
-                    // 通过 EventLoop::post 将结果回写到正确的线程。
-                    // SqlExecutor 的工作线程不能直接操作 TcpConnection 或 Channel。
-                    loop->post(
-                            [weakConn,sqlResult = std::move(sqlResult)]
-                            ()
-                            {
-                                // 连接已断开，跳过响应回写。
-                                auto conn = weakConn.lock();
-                                if(!conn)
-                                {
-                                    return;
-                                }
-
-                                net::TcpConnection::HandlerResult resp;
-                                resp.contentType = "application/json; charset=utf-8";
-                                if(sqlResult.ok)
-                                {
-                                    resp.statusCode = 200;
-                                    resp.body = formatRowsToJson_(sqlResult.value.value());
-                                }
-                                else
-                                {
-                                    resp.statusCode = 500;
-                                    nlohmann::json err;
-                                    err["error"] = "SQL query failed";
-                                    err["message"] = sqlResult.err.message;
-                                    resp.body = err.dump();
-                                }
-
-                                conn->sendAsyncResponse(resp);
-                            }
-                            
-                    );
+                    }
+                    catch(const std::exception &err)
+                    {
+                        // ensureConnected_ / ping 抛出的异常在这里闭环，
+                        // 不能让连接停在 asyncPending_ 状态。
+                        postSqlError_(loop, weakConn, err.what());
+                    }
+                    catch(...)
+                    {
+                        postSqlError_(loop, weakConn, "unknown SQL execution error");
+                    }
                 }
             );
+
+        if(!submitted)
+        {
+            // 执行器已停止或拒绝任务：退回同步 503，不能让请求挂起。
+            result.async = false;
+            result.statusCode = 503;
+            result.body = R"({"error":"SQL executor unavailable"})";
+        }
         return result;
     }
 }//namespace reactor::handler

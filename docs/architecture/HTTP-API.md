@@ -8,7 +8,7 @@
 | 方法 | 路径 | 处理器 | 成功 | 失败 |
 |------|------|--------|------|------|
 | GET | `/healthz` | StaticFileHandler | 200 `ok\n` | 405（非 GET） |
-| GET | `/query` | SqlHandler（仅 `--enable-sql`） | 200 JSON | 400 / 403 / 405 / 500 / 挂起（见 §4） |
+| GET | `/query` | SqlHandler（仅 `--enable-sql`） | 200 JSON | 400 / 403 / 405 / 500 / 503 |
 | GET | `/sql` | SqlHandler（仅 `--enable-sql`） | 200 JSON | 同上；未开启时 404 |
 | GET | 其他路径 | StaticFileHandler | 200 文件或目录索引 | 403 / 404 / 405 / 500 |
 | 其他方法 | 任意 | 路由 → 静态处理器 | — | 405 |
@@ -89,18 +89,16 @@ Content-Type: application/json; charset=utf-8
 - 状态码 500；
 - `message` 会透出数据库错误信息，属于信息泄露面，仅限本机使用。
 
-### 已知缺陷（未修复）
+### 失败语义
 
-**数据库不可达时请求不会返回错误，而是一直挂起。** 原因链：
+- 查询执行失败：500，`{"error":"SQL query failed","message":"<驱动原始错误>"}`；
+- 数据库连接失败、ping 失败等工作线程异常：同样回写 500，不再挂起（issue #3）；
+- 执行器已停止、任务无法提交：503，`{"error":"SQL executor unavailable"}`；
+- `message` 会透出数据库错误信息，属于信息泄露面，仅限本机使用。
 
-1. `ThreadLocalSingleConn::ensureConnected_()` 连接失败抛异常；
-2. `SqlExecutor::run_()` 捕获后只写 `spdlog::warn`，任务结束；
-3. 没有任何代码向连接回写响应，`async = true` 的连接永远等待。
-
-复现：服务以 `--enable-sql` 启动、数据库不可达时，
-`curl --max-time 8 'http://127.0.0.1:8080/sql?sql=SELECT%201'` 超时，服务端日志出现
-`SqlExecutor job failed: sql connect failed`。登记为
-[BACKLOG B-03](../plan/BACKLOG.md) / issue [#3](https://github.com/LYsnowQ/CPP_Reactor/issues/3)。
+> 实现方式：`SqlHandler` 在提交给 `SqlExecutor` 的 job 内捕获 `std::exception` 与未知异常，
+> 通过 `EventLoop::post()` 回到连接线程调用 `sendAsyncResponse()`；
+> `SqlExecutor::submit()` 返回 false 时退回同步 503。
 
 ## 5. 状态码汇总
 
@@ -113,7 +111,8 @@ Content-Type: application/json; charset=utf-8
 | 405 | 非 GET 访问静态/SQL 接口 |
 | 408 | 请求未收全超时 |
 | 413 | `Content-Length` 超过 1 MB |
-| 500 | 文件读取失败、SQL 执行失败 |
+| 500 | 文件读取失败、SQL 执行失败、数据库连接失败 |
+| 503 | SQL 执行器已停止/拒绝任务 |
 
 ## 6. 安全边界（必须遵守）
 
