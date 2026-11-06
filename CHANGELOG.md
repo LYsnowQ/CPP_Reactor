@@ -22,6 +22,7 @@
 
 - 根目录整理：`LICENSING*.md` → `docs/legal/`，`LICENSE-MIT` → `LICENSES/MIT.txt`，
   `docs/iterations/` → `docs/history/iterations/`。
+- CI 升级到 `actions/checkout@v7`；`main` 启用分支保护与必需检查（#17）。
 
 ## [2.0.0] - 2026-11-06
 
