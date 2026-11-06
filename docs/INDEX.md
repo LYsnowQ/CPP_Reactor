@@ -50,7 +50,7 @@
 
 | 文档 | 说明 |
 |------|------|
-| [BACKLOG](plan/BACKLOG.md) | 8 条已知问题：Docker、停机、日志、静态文件、测试等 |
+| [BACKLOG](plan/BACKLOG.md) | 已迁移到 GitHub Issues 的说明与迁移记录（不再维护逐条详情） |
 
 ## reviews/ — 审计与验收
 
@@ -65,6 +65,7 @@
 | [2026-11-06 文档规范化](changes/2026-11-06-docs-normalization.md) | 本次结构迁移、修复项、验证证据、未完成事项 |
 | [2026-11-06 p0/p1 修复](changes/2026-11-06-p0-p1-fixes.md) | issue #1–#4 的实现、验证与遗留 |
 | [2026-11-06 许可变更](changes/2026-11-06-license-change.md) | 改为非商业许可、历史 MIT 边界、XERJ 收录请求的处置 |
+| [2026-11-06 管理转型](changes/2026-11-06-management-transition.md) | issue-first、PR 流程、GitHub Issues 成为唯一待办主档 |
 
 ## iterations/ — 迭代历史（只读）
 
