@@ -1,7 +1,7 @@
 # HTTP-API.md — 接口契约
 
 > 适用范围：`main_run`（HTTP 服务器）。`main_echo` 不是 HTTP 服务，只回固定 200 空响应。
-> 核对基线：`main` @ `788b78c`。接口语义变化时必须同步本文件与 CHANGELOG。
+> 核对基线：`main` @ `221df66`。接口语义变化时必须同步本文件与 CHANGELOG。
 
 ## 1. 路由总表
 
